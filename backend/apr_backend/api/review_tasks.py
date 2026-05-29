@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
@@ -96,12 +96,21 @@ def list_review_tasks(
     db: DbSession,
     status_filter: TaskStatus | None = Query(default=None, alias="status"),
     project_name: str | None = None,
+    risk_level: RiskLevel | None = None,
+    created_after: date | None = None,
+    created_before: date | None = None,
 ) -> list[ReviewTask]:
     statement = select(ReviewTask).where(ReviewTask.demo_owner == demo_owner, ReviewTask.deleted_at.is_(None))
     if status_filter is not None:
         statement = statement.where(ReviewTask.status == status_filter)
     if project_name:
         statement = statement.where(ReviewTask.project_name == project_name)
+    if risk_level is not None:
+        statement = statement.where(ReviewTask.risk_level == risk_level)
+    if created_after is not None:
+        statement = statement.where(ReviewTask.created_at >= created_after)
+    if created_before is not None:
+        statement = statement.where(ReviewTask.created_at < created_before)
     statement = statement.order_by(ReviewTask.created_at.desc())
     return list(db.scalars(statement).all())
 

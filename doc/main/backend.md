@@ -141,4 +141,22 @@ Verification:
 
 Next backend milestone:
 
-- Implement the report retrieval API and rule CRUD API.
+## Implement history filtering and dashboard metrics API
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- `GET /api/metrics/dashboard` returning total tasks, tasks in last 30 days, total issues, risk distribution, useful/false_positive/adoption rates.
+- Added `risk_level`, `created_after`, `created_before` query filters to `GET /api/review-tasks` list endpoint.
+- Owner-scoped metrics via demo owner header; deleted tasks and their issues/feedback excluded.
+- Zero-division safe feedback rate calculations return 0.0 for empty data.
+
+Verification:
+
+- `uv run python -m pytest tests/` passes with 116 tests (12 metrics + 104 prior).
+- Metrics tests cover: risk level filter, date range filters, combined filters, deleted exclusion, total tasks, risk distribution, 30-day window, issue count, feedback rates, empty dashboard zeros, and owner isolation.
+
+Next backend milestone:
+
+- Implement baseline authentication and logging guardrails.
