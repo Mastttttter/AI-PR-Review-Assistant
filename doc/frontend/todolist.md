@@ -11,12 +11,12 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer
 
-- [ ] Define frontend API types and request layer
+- [x] Define frontend API types and request layer
   - Scope: Add typed request and response models for review tasks, reports, issues, rules, and feedback; centralize API calls under one client layer.
   - Acceptance: UI code consumes typed API functions instead of hard-coded fetch calls; API enums use English technical values with Chinese UI labels; request errors surface user-readable messages.
   - Tests: Type check; mocked API unit tests for success and failure responses using MockLLM-shaped fixtures.
   - Owner: frontend-engineer
-  - Signed-off: pending
+  - Signed-off: frontend-engineer
 
 - [ ] Implement new Review task form
   - Scope: Build PR title, PR description, project name, target branch, developer name, and diff input fields; use Monaco Editor or a diff-friendly text area for code changes.
