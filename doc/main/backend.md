@@ -103,4 +103,23 @@ Verification:
 
 Next backend milestone:
 
-- Implement the AI Review orchestration worker that ties together the full pipeline.
+## Implement Review rule CRUD API
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- Full REST API: create, list, update, enable, disable, and soft-delete endpoints.
+- Pydantic request/response models with validation for name, description, rule type, and severity enum fields.
+- Owner-enforced access via demo owner header; deleted rules excluded from list.
+- Enable/disable as idempotent PATCH operations returning updated rule.
+- Worker rule loading query pattern verified for enabled + non-deleted rules.
+
+Verification:
+
+- `uv run python -m pytest tests/` passes with 88 tests (16 rules CRUD + 72 prior).
+- CRUD tests cover: create 201 with all fields, validation errors, invalid enum rejection, disabled creation, owner-filtered list, full update, deleted/other-owner 404, enable, disable, enable idempotency, soft delete timestamp, post-delete list exclusion, and worker rule queries.
+
+Next backend milestone:
+
+- Implement the issue feedback API.
