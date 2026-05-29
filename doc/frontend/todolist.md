@@ -18,12 +18,12 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer
 
-- [ ] Implement new Review task form
+- [x] Implement new Review task form
   - Scope: Build PR title, PR description, project name, target branch, developer name, and diff input fields; use Monaco Editor or a diff-friendly text area for code changes.
   - Acceptance: PR title and diff are required; validation prevents empty submission and diff input over 50k characters; successful submission handles returned task id and status, enters generating state, and routes to the task/report flow.
   - Tests: Form validation tests; 50k diff-limit test; mocked submit test using task id plus status response; manual browser test with a sample diff.
   - Owner: frontend-engineer
-  - Signed-off: pending
+  - Signed-off: frontend-engineer
 
 - [ ] Implement Review status polling flow
   - Scope: Poll task and report endpoints after creation and while viewing an unfinished task; show pending, running, completed, and failed states.
