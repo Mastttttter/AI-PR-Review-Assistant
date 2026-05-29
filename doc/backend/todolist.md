@@ -46,12 +46,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-30
 
-- [ ] Implement AI Review orchestration worker
+- [x] Implement AI Review orchestration worker
   - Scope: Process queued Review jobs through task load, status update, diff parse, rule evaluation, prompt build, LLM call, result validation, report persistence, and final status update.
   - Acceptance: RQ worker transitions pending to running to completed or failed; failures preserve a useful error state; completed reports are persisted atomically.
   - Tests: Worker integration tests using MockLLM for successful Review, LLM failure, invalid AI output, and retry or rerun behavior.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-30
 
 - [ ] Validate and normalize AI Review output
   - Scope: Enforce structured JSON schema for summary, risk level, risk reasons, issues, severity, location, suggestion, confidence, and matched rule IDs using English technical enum values.
