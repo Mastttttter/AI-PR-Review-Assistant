@@ -141,4 +141,23 @@ Verification:
 
 Next backend milestone:
 
-- Implement the report retrieval API and rule CRUD API.
+## Implement report retrieval API
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- `GET /api/review-tasks/{task_id}/report` endpoint returning full structured report.
+- `ReportResponse` model with PR basics, status, risk level, error message, summary, risk reasons, issue stats, and severity-sorted issues.
+- `ReportIssueResponse` with all PRD-required fields: type, severity, description, suggestion, confidence, code location, matched rule IDs, and feedback status.
+- Owner access control via demo owner header; deleted tasks excluded.
+- Handles pending (null summary), failed (preserves error), completed, and empty-issue states.
+
+Verification:
+
+- `uv run python -m pytest tests/` passes with 115 tests (11 report API + 104 prior).
+- Report tests cover: PR basics, summary/risk population, severity sorting, issue stats, PRD field completeness, feedback status, pending task null summary, failed task error, access control, deleted exclusion, and empty issues.
+
+Next backend milestone:
+
+- Implement the Review rule CRUD API.
