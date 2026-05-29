@@ -51,6 +51,22 @@ Verification:
 - `uv run python -m pytest tests/` passes with 17 tests (9 lifecycle API tests + 8 prior tests).
 - Lifecycle tests cover: validation errors, 50k limit, create + enqueue, list filtering, detail, soft delete exclusion, rerun reset, and deleted-task rejection.
 
+## Implement diff parser and change metrics
+
+Status: completed by backend-engineer on 2026-05-29.
+
+Delivered scope:
+
+- Unified diff parser with file splitting, hunk line counting, rename/new/deleted file detection, and language hints for 40+ file extensions.
+- Plain code snippet fallback when input lacks git diff headers.
+- Test path detection via path patterns, sensitive keyword extraction from file paths.
+- Structured output: file entries, hunks, and aggregated diff metrics (file count, line deltas, test coverage, keywords, languages).
+
+Verification:
+
+- `uv run python -m pytest tests/` passes with 32 tests (15 parser tests + 17 prior tests).
+- Parser tests cover: multi-file diff, rename paths, new/deleted file modes, hunk line counts, empty/whitespace input, plain snippet fallback, language detection, test file detection, and sensitive keywords.
+
 Next backend milestone:
 
-- Implement the diff parser module so the worker can parse diff input for metric extraction and prompt building.
+- Implement the Review rule engine for deterministic hard-rule matching.

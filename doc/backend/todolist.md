@@ -25,12 +25,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-29
 
-- [ ] Implement diff parser and change metrics
+- [x] Implement diff parser and change metrics
   - Scope: Parse unified diff or code snippet input into file entries, hunks, line counts, language hints, test-file detection, and sensitive keyword signals.
   - Acceptance: Parser supports normal unified diffs and graceful fallback for plain code snippets; metrics are available for risk assessment and prompt context.
   - Tests: Unit tests for multi-file diff, rename-like paths, test file detection, sensitive keywords, empty invalid diff, and plain snippet fallback.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-29
 
 - [ ] Implement Review rule engine
   - Scope: Load enabled rules and evaluate hard-rule matches for banned content, missing tests, security keywords, naming/documentation constraints, and module constraints where deterministic matching is feasible.
