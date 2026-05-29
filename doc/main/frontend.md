@@ -37,6 +37,24 @@ Verification:
 - `pnpm test` passes with 13 tests.
 - `pnpm build` passes.
 
+## Implement new Review task form
+
+Status: completed by frontend-engineer on 2026-05-29.
+
+Delivered scope:
+
+- Form with PR title, PR description, project name, target branch, developer name, and diff content fields.
+- Client-side validation: PR title and diff required, diff capped at 50k characters, live character count.
+- Submission with loading state, API error surfacing, and navigation to task report on success.
+- Form disables submit during creation, cancel button returns to workbench.
+- Testable via injected API client prop; form styles responsive with mobile grid reflow.
+
+Verification:
+
+- `pnpm typecheck` passes.
+- `pnpm test` passes with 17 tests (4 review form tests).
+- `pnpm build` passes.
+
 Next frontend milestone:
 
-- Implement the new Review task form using the typed API request layer.
+- Implement the Review status polling flow so users see live task progress after form submission.

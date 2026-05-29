@@ -1,4 +1,9 @@
-import { NavLink, Route, Routes, useParams } from 'react-router-dom';
+import { FormEvent, useState } from 'react';
+import { NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { ApiRequestError, apiClient } from './api';
+import type { ApiClient, CreateReviewTaskRequest } from './api';
+
+const MAX_DIFF_LENGTH = 50_000;
 
 const navigationItems = [
   { label: '工作台', path: '/' },
@@ -7,6 +12,14 @@ const navigationItems = [
   { label: '规则配置', path: '/rules' },
   { label: '报告详情', path: '/reviews/demo-report' }
 ];
+
+type ReviewTaskApi = Pick<ApiClient, 'createReviewTask'>;
+
+type FormErrors = Partial<Record<keyof CreateReviewTaskRequest | 'submit', string>>;
+
+type AppProps = {
+  client?: ReviewTaskApi;
+};
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -68,8 +81,121 @@ function WorkbenchPage() {
   );
 }
 
-function NewReviewPage() {
-  return <PageCard title="新建 Review" description="提交 PR 标题、描述与代码 diff 后进入 Review 生成状态。" />;
+function validateReviewRequest(request: CreateReviewTaskRequest): FormErrors {
+  const errors: FormErrors = {};
+  if (!request.prTitle.trim()) {
+    errors.prTitle = 'PR 标题不能为空。';
+  }
+  if (!request.diffContent.trim()) {
+    errors.diffContent = '代码变更内容不能为空。';
+  } else if (request.diffContent.length > MAX_DIFF_LENGTH) {
+    errors.diffContent = '代码变更内容不能超过 50,000 个字符。';
+  }
+  return errors;
+}
+
+function emptyToUndefined(value: string): string | undefined {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function NewReviewPage({ client }: { client: ReviewTaskApi }) {
+  const navigate = useNavigate();
+  const [form, setForm] = useState<CreateReviewTaskRequest>({
+    prTitle: '',
+    prDescription: '',
+    projectName: '',
+    targetBranch: '',
+    developerName: '',
+    diffContent: ''
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const diffCount = form.diffContent.length;
+  const diffIsOverLimit = diffCount > MAX_DIFF_LENGTH;
+
+  function updateField(field: keyof CreateReviewTaskRequest, value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
+    setErrors((current) => ({ ...current, [field]: undefined, submit: undefined }));
+  }
+
+  async function submitReview(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const request: CreateReviewTaskRequest = {
+      prTitle: form.prTitle.trim(),
+      prDescription: emptyToUndefined(form.prDescription ?? ''),
+      projectName: emptyToUndefined(form.projectName ?? ''),
+      targetBranch: emptyToUndefined(form.targetBranch ?? ''),
+      developerName: emptyToUndefined(form.developerName ?? ''),
+      diffContent: form.diffContent
+    };
+    const validationErrors = validateReviewRequest(request);
+    setErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await client.createReviewTask(request);
+      navigate(`/reviews/${result.taskId}`, { state: { reviewStatus: result.status } });
+    } catch (error) {
+      const message = error instanceof ApiRequestError ? error.message : '创建 Review 任务失败，请稍后重试。';
+      setErrors({ submit: message });
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <PageCard title="新建 Review" description="提交 PR 标题、描述与代码 diff 后进入 Review 生成状态。">
+      <form className="review-form" onSubmit={submitReview} noValidate>
+        {isSubmitting ? <LoadingShell label="正在创建 Review 任务" /> : null}
+        {errors.submit ? <ErrorShell message={errors.submit} /> : null}
+
+        <div className="form-grid">
+          <label className="form-field">
+            <span>PR 标题 *</span>
+            <input value={form.prTitle} onChange={(event) => updateField('prTitle', event.target.value)} placeholder="例如：优化用户登录逻辑" aria-invalid={Boolean(errors.prTitle)} />
+            {errors.prTitle ? <strong>{errors.prTitle}</strong> : null}
+          </label>
+
+          <label className="form-field">
+            <span>所属项目</span>
+            <input value={form.projectName} onChange={(event) => updateField('projectName', event.target.value)} placeholder="例如：user-center" />
+          </label>
+
+          <label className="form-field">
+            <span>目标分支</span>
+            <input value={form.targetBranch} onChange={(event) => updateField('targetBranch', event.target.value)} placeholder="例如：main" />
+          </label>
+
+          <label className="form-field">
+            <span>开发者名称</span>
+            <input value={form.developerName} onChange={(event) => updateField('developerName', event.target.value)} placeholder="例如：Alice" />
+          </label>
+        </div>
+
+        <label className="form-field">
+          <span>PR 描述</span>
+          <textarea value={form.prDescription} onChange={(event) => updateField('prDescription', event.target.value)} rows={4} placeholder="说明改动背景、影响范围和需要重点关注的风险。" />
+        </label>
+
+        <label className="form-field diff-field">
+          <span>代码变更内容 *</span>
+          <textarea value={form.diffContent} onChange={(event) => updateField('diffContent', event.target.value)} rows={12} placeholder="粘贴 git diff 或关键代码片段。" aria-invalid={Boolean(errors.diffContent || diffIsOverLimit)} />
+          <small className={diffIsOverLimit ? 'limit-count over-limit' : 'limit-count'}>{diffCount.toLocaleString()} / 50,000</small>
+          {errors.diffContent ? <strong>{errors.diffContent}</strong> : null}
+        </label>
+
+        <div className="form-actions">
+          <button type="button" className="secondary-button" onClick={() => navigate('/')} disabled={isSubmitting}>取消</button>
+          <button type="submit" className="primary-button" disabled={isSubmitting}>{isSubmitting ? '创建中' : '开始 Review'}</button>
+        </div>
+      </form>
+    </PageCard>
+  );
 }
 
 function HistoryPage() {
@@ -112,12 +238,12 @@ export function ErrorShell({ message }: { message: string }) {
   );
 }
 
-export function App() {
+export function App({ client = apiClient }: AppProps) {
   return (
     <Shell>
       <Routes>
         <Route path="/" element={<WorkbenchPage />} />
-        <Route path="/reviews/new" element={<NewReviewPage />} />
+        <Route path="/reviews/new" element={<NewReviewPage client={client} />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/rules" element={<RulesPage />} />
         <Route path="/reviews/:taskId" element={<ReportPage />} />
