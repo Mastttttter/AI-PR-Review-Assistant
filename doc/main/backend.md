@@ -103,4 +103,23 @@ Verification:
 
 Next backend milestone:
 
-- Implement the AI Review orchestration worker that ties together the full pipeline.
+## Implement AI Review orchestration worker
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- Full orchestration pipeline: task load, status update (pending->running->completed/failed), diff parse, rule load+engine, prompt build with system/rules/diff layers, LLM call, output validation/normalization, report+issue persistence.
+- `_build_prompt` assembles four-layer prompt: system role, review policy, team rules, PR context with diff metrics.
+- `_validate_and_normalize_ai_output` enforces enum values, fills missing fields, filters unknown rule IDs, and ensures high-risk issues have suggestions.
+- `_persist_report` writes `ReviewReport` and `ReviewIssue` rows atomically, updates task risk level and issue count.
+- `run_review_orchestrator` handles deleted task skip, LLM errors writing failure state, and unexpected exceptions caught with error message.
+
+Verification:
+
+- `uv run python -m pytest tests/` passes with 81 tests (9 orchestrator tests + 72 prior).
+- Orchestrator tests cover: full success pipeline, report persistence, issue persistence, LLM failure state, error message preservation, rerun clearing failure, invalid enum normalization, missing field completion, and enabled-rule-only loading.
+
+Next backend milestone:
+
+- Implement the report retrieval API and rule CRUD API.
