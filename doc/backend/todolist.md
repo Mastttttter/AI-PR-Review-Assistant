@@ -60,12 +60,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: pending
 
-- [ ] Implement report retrieval API
+- [x] Implement report retrieval API
   - Scope: Return structured report details with PR basics, status, summary, risk, reasons, issue statistics, grouped/sorted issues, matched rules, suggestions, and feedback states.
   - Acceptance: Report API supports frontend detail page without additional data stitching; issues are sorted by severity and include all PRD-required fields.
   - Tests: API tests for completed task report, pending task response, failed task response, empty issue list, and severity sorting.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-30
 
 ## P1 rules, history, and feedback
 

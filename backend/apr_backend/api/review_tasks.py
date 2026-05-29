@@ -6,8 +6,8 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from apr_backend.db.enums import RiskLevel, TaskStatus
-from apr_backend.db.models import ReviewTask
+from apr_backend.db.enums import Confidence, FeedbackStatus, IssueType, RiskLevel, TaskStatus
+from apr_backend.db.models import ReviewIssue, ReviewTask
 from apr_backend.db.session import get_db
 from apr_backend.worker.queue import enqueue_review_job
 
@@ -131,6 +131,82 @@ def rerun_review_task(task_id: str, demo_owner: DemoOwnerHeader, db: DbSession) 
     db.refresh(task)
     enqueue_review_job(task.id)
     return ReviewTaskCreateResponse(task_id=task.id, status=task.status)
+
+
+class ReportIssueResponse(BaseModel):
+    id: str
+    title: str
+    issue_type: IssueType
+    severity: str
+    description: str
+    file_path: str | None
+    line_hint: str | None
+    code_snippet: str | None
+    suggestion: str
+    confidence: Confidence
+    matched_rule_ids: list[str]
+    feedback_status: FeedbackStatus
+
+    model_config = {"from_attributes": True}
+
+
+class ReportResponse(BaseModel):
+    id: str
+    pr_title: str
+    pr_description: str | None
+    project_name: str | None
+    target_branch: str | None
+    developer_name: str | None
+    status: TaskStatus
+    risk_level: RiskLevel | None
+    error_message: str | None
+    created_at: datetime
+    updated_at: datetime
+    summary: str | None
+    risk_reasons: list[str]
+    issue_stats: dict
+    issues: list[ReportIssueResponse]
+
+    model_config = {"from_attributes": True}
+
+
+_SEVERITY_ORDER: dict[str, int] = {"high": 0, "medium": 1, "low": 2}
+
+
+@router.get("/{task_id}/report", response_model=ReportResponse)
+def get_review_report(task_id: str, demo_owner: DemoOwnerHeader, db: DbSession) -> ReportResponse:
+    task = get_owned_active_task(db, task_id, demo_owner)
+
+    report = task.report
+    summary = report.summary if report and report.summary else None
+    risk_reasons = report.risk_reasons if report and report.risk_reasons else []
+    issue_stats = report.issue_stats if report and report.issue_stats else {}
+
+    issues = db.scalars(
+        select(ReviewIssue).where(
+            ReviewIssue.task_id == task_id,
+        ).order_by(ReviewIssue.created_at)
+    ).all()
+
+    sorted_issues = sorted(issues, key=lambda i: _SEVERITY_ORDER.get(i.severity.value if hasattr(i.severity, 'value') else str(i.severity), 99))
+
+    return ReportResponse(
+        id=task.id,
+        pr_title=task.pr_title,
+        pr_description=task.pr_description,
+        project_name=task.project_name,
+        target_branch=task.target_branch,
+        developer_name=task.developer_name,
+        status=task.status,
+        risk_level=task.risk_level,
+        error_message=task.error_message,
+        created_at=task.created_at,
+        updated_at=task.updated_at,
+        summary=summary,
+        risk_reasons=risk_reasons,
+        issue_stats=issue_stats,
+        issues=sorted_issues,
+    )
 
 
 def get_owned_active_task(db: Session, task_id: str, demo_owner: str) -> ReviewTask:
