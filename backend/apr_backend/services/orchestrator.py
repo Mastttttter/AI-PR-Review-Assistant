@@ -43,8 +43,8 @@ def _build_prompt(task: ReviewTask, parsed: ParsedDiff, rule_matches: list[RuleM
         parts.extend(["", "## Team Rules", json.dumps(rules_json, indent=2)])
 
     if rule_matches:
-        matches_json = [{"rule_name": m.rule_name, "description": m.description, "file_path": m.file_path, "line_hint": m.line_hint} for m in rule_matches]
-        parts.extend(["", "## Pre-matched Rule Results (for context)", json.dumps(matches_json, indent=2)])
+        matches_json = [{"rule_id": m.rule_id, "rule_name": m.rule_name, "description": m.description, "file_path": m.file_path, "line_hint": m.line_hint} for m in rule_matches]
+        parts.extend(["", "## Pre-matched Rule Results (for context)", "These rules were matched deterministically. Include their rule_id values in matched_rule_ids for any related issues.", json.dumps(matches_json, indent=2)])
 
     parts.extend([
         "",
@@ -74,6 +74,7 @@ def _build_prompt(task: ReviewTask, parsed: ParsedDiff, rule_matches: list[RuleM
         "summary: {purpose, changed_modules, key_files, business_impact, test_or_security_notes}",
         "risk: {level, reasons}",
         "issues: [{title, type, severity, description, location: {file_path, line_hint, code_snippet}, suggestion, confidence, matched_rule_ids}]",
+        "matched_rule_ids must be a list of rule_id values from the Pre-matched Rule Results section (empty list if none apply).",
     ])
 
     return "\n".join(parts)
