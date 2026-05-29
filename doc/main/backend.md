@@ -178,4 +178,22 @@ Verification:
 
 Next backend milestone:
 
-- Implement the issue feedback API.
+## Implement issue feedback API
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- `PATCH /api/review-issues/{issue_id}/feedback` endpoint accepting feedback status and optional comment.
+- Updates `ReviewIssue.feedback_status` and creates `IssueFeedback` history record.
+- All five PRD statuses accepted: useful, useless, false_positive, adopted, ignored.
+- Owner-enforced access; AI report content (description, suggestion) unchanged by feedback.
+
+Verification:
+
+- `uv run python -m pytest tests/` passes with 150 tests (19 feedback + 131 prior).
+- Feedback tests cover: all 5 statuses, issue update, optional/null comment, feedback record persistence, repeated update overwrite, invalid status 422, missing issue 404, missing owner 422, and report content immutability.
+
+Next backend milestone:
+
+- Implement the history filtering and dashboard metrics API.
