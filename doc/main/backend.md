@@ -67,6 +67,22 @@ Verification:
 - `uv run python -m pytest tests/` passes with 32 tests (15 parser tests + 17 prior tests).
 - Parser tests cover: multi-file diff, rename paths, new/deleted file modes, hunk line counts, empty/whitespace input, plain snippet fallback, language detection, test file detection, and sensitive keywords.
 
+## Implement Review rule engine
+
+Status: completed by backend-engineer on 2026-05-29.
+
+Delivered scope:
+
+- Six hard-rule checkers: banned content (console.log, debugger, TODO, etc.), missing tests, security keywords (hardcoded secrets, eval, SQL injection), generic variable names, missing function docstrings, and controller-layer DB access.
+- Rule engine dispatches checkers by rule type, skips disabled rules, passes parsed diff for test/module checks and raw diff content for line-level checks.
+- RuleMatch dataclass with rule ID, type, severity, description, file path, line hint, and code snippet fields.
+- All six `RuleType` enum values have registered checkers.
+
+Verification:
+
+- `uv run python -m pytest tests/` passes with 52 tests (20 rule engine tests + 32 prior tests).
+- Rule engine tests cover: each checker type (banned, test, security, naming, docs, module), disabled rule exclusion, multiple enabled rules, unknown rule types, checker coverage completeness, and edge cases (deleted-only files, empty diffs).
+
 Next backend milestone:
 
-- Implement the Review rule engine for deterministic hard-rule matching.
+- Implement the LLM adapter and mock provider for AI-driven review analysis.

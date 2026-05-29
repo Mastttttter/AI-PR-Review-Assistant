@@ -32,12 +32,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-29
 
-- [ ] Implement Review rule engine
+- [x] Implement Review rule engine
   - Scope: Load enabled rules and evaluate hard-rule matches for banned content, missing tests, security keywords, naming/documentation constraints, and module constraints where deterministic matching is feasible.
   - Acceptance: Initial rule matching uses hard-rule checks plus LLM review explanation, not complex static analysis; rule matches can become report issues or matched rule IDs, and disabled rules never affect Review results.
   - Tests: Unit tests for each supported hard-rule type, enabled/disabled behavior, and matched rule propagation with MockLLM explanation fixtures.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-29
 
 - [ ] Implement LLM adapter and mock provider
   - Scope: Add provider abstraction, OpenAI-compatible adapter shape, mock adapter for tests/demo, server-side API key handling, timeout handling, and no frontend LLM exposure.
