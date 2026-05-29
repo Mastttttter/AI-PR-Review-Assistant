@@ -3,8 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { App } from '../App';
-import type { ReviewReport, ReviewTask } from '../api';
-import { emptyReport, minimalReport, mockReviewReport, mockReviewTask } from '../test-fixtures/mockReview';
+import type { ReviewReport, ReviewTask, ReviewTaskListQuery } from '../api';
+import { emptyReport, minimalReport, mockReviewReport, mockReviewTask, mockTaskList } from '../test-fixtures/mockReview';
 
 async function neverCalled(): Promise<never> {
   throw new Error('should not be called');
@@ -14,10 +14,14 @@ function neverReport(_id: string): Promise<ReviewReport> {
   throw new Error('should not be called');
 }
 
-function renderAt(path: string, client = { createReviewTask: neverCalled, getReviewTask: neverCalled, getReviewReport: neverCalled }, pollIntervalMs?: number) {
+async function neverTasks(_query?: ReviewTaskListQuery): Promise<ReviewTask[]> {
+  throw new Error('should not be called');
+}
+
+function renderAt(path: string, client: Record<string, unknown> = { createReviewTask: neverCalled, getReviewTask: neverCalled, getReviewReport: neverCalled, listReviewTasks: neverTasks }, pollIntervalMs?: number) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <App client={client} pollIntervalMs={pollIntervalMs} />
+      <App client={client as never} pollIntervalMs={pollIntervalMs} />
     </MemoryRouter>
   );
 }
@@ -235,3 +239,156 @@ describe('Review report detail page', () => {
     expect(screen.queryByText(/业务影响/)).not.toBeInTheDocument();
   });
 });
+
+describe('History records page', () => {
+  function historyClient(tasks: ReviewTask[] = mockTaskList) {
+    return { listReviewTasks: vi.fn(async () => tasks) };
+  }
+
+  it('renders task list with all columns', async () => {
+    renderAt('/history', historyClient());
+    await waitFor(() => expect(screen.getByText('优化用户登录逻辑')).toBeInTheDocument());
+    const rows = document.querySelectorAll('.history-row');
+    expect(rows.length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByText('5')).toBeInTheDocument();
+    const pills = document.querySelectorAll('.status-pill-task');
+    expect(Array.from(pills).some((el) => el.textContent === '已完成')).toBe(true);
+  });
+
+  it('distinguishes pending, running, completed, and failed states', async () => {
+    renderAt('/history', historyClient());
+    await waitFor(() => expect(screen.getByText('优化用户登录逻辑')).toBeInTheDocument());
+    const pills = document.querySelectorAll('.status-pill-task');
+    const labels = Array.from(pills).map((el) => el.textContent);
+    expect(labels).toContain('已完成'); expect(labels).toContain('分析中');
+    expect(labels).toContain('待分析'); expect(labels).toContain('分析失败');
+  });
+
+  it('navigates to task detail on row click', async () => {
+    const user = userEvent.setup();
+    renderAt('/history', historyClient());
+    await waitFor(() => expect(screen.getByText('优化用户登录逻辑')).toBeInTheDocument());
+    await user.click(screen.getByText('优化用户登录逻辑'));
+    expect(screen.getByRole('heading', { name: 'Review 报告详情' })).toBeInTheDocument();
+    expect(screen.getByText(/task-001/)).toBeInTheDocument();
+  });
+
+  it('shows filter controls', async () => {
+    renderAt('/history', historyClient());
+    await waitFor(() => expect(screen.getByText('优化用户登录逻辑')).toBeInTheDocument());
+    expect(screen.getByPlaceholderText('按项目筛选')).toBeInTheDocument();
+    expect(screen.getAllByRole('combobox').length).toBe(2);
+  });
+
+  it('filters by project name', async () => {
+    const listReviewTasks = vi.fn(async () => mockTaskList);
+    renderAt('/history', { listReviewTasks });
+    const projectInput = screen.getByPlaceholderText('按项目筛选');
+    await userEvent.setup().type(projectInput, 'pay');
+    await waitFor(() => expect(listReviewTasks).toHaveBeenCalledWith(expect.objectContaining({ projectName: 'pay' })));
+  });
+
+  it('filters by risk level', async () => {
+    const listReviewTasks = vi.fn(async () => mockTaskList);
+    renderAt('/history', { listReviewTasks });
+    const riskSelect = screen.getAllByRole('combobox')[0];
+    await userEvent.setup().selectOptions(riskSelect, 'high');
+    await waitFor(() => expect(listReviewTasks).toHaveBeenCalledWith(expect.objectContaining({ riskLevel: 'high' })));
+  });
+
+  it('filters by status', async () => {
+    const listReviewTasks = vi.fn(async () => mockTaskList);
+    renderAt('/history', { listReviewTasks });
+    const statusSelect = screen.getAllByRole('combobox')[1];
+    await userEvent.setup().selectOptions(statusSelect, 'completed');
+    await waitFor(() => expect(listReviewTasks).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed' })));
+  });
+
+  it('shows empty state when no tasks', async () => {
+    renderAt('/history', historyClient([]));
+    await waitFor(() => expect(screen.getByText('暂无 Review 记录。')).toBeInTheDocument());
+  });
+
+  it('handles load errors', async () => {
+    const listReviewTasks = vi.fn(async () => { throw new Error('Network error'); });
+    renderAt('/history', { listReviewTasks });
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('加载历史记录失败'));
+  });
+});
+
+describe('History records page', () => {
+  function historyClient(tasks: ReviewTask[] = mockTaskList) {
+    return { listReviewTasks: vi.fn(async () => tasks) };
+  }
+
+  it('renders task list with all columns', async () => {
+    renderAt('/history', historyClient() as never);
+    await waitFor(() => expect(screen.getByText('优化用户登录逻辑')).toBeInTheDocument());
+    const rows = document.querySelectorAll('.history-row');
+    expect(rows.length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByText('5')).toBeInTheDocument();
+    const pills = document.querySelectorAll('.status-pill-task');
+    expect(Array.from(pills).some((el) => el.textContent === '已完成')).toBe(true);
+  });
+
+  it('distinguishes pending, running, completed, and failed states', async () => {
+    renderAt('/history', historyClient() as never);
+    await waitFor(() => expect(screen.getByText('优化用户登录逻辑')).toBeInTheDocument());
+    const pills = document.querySelectorAll('.status-pill-task');
+    const labels = Array.from(pills).map((el) => el.textContent);
+    expect(labels).toContain('已完成'); expect(labels).toContain('分析中');
+    expect(labels).toContain('待分析'); expect(labels).toContain('分析失败');
+  });
+
+  it('navigates to task detail on row click', async () => {
+    const user = userEvent.setup();
+    renderAt('/history', historyClient() as never);
+    await waitFor(() => expect(screen.getByText('优化用户登录逻辑')).toBeInTheDocument());
+    await user.click(screen.getByText('优化用户登录逻辑'));
+    expect(screen.getByRole('heading', { name: 'Review 报告详情' })).toBeInTheDocument();
+    expect(screen.getByText(/task-001/)).toBeInTheDocument();
+  });
+
+  it('shows filter controls', async () => {
+    renderAt('/history', historyClient() as never);
+    await waitFor(() => expect(screen.getByText('优化用户登录逻辑')).toBeInTheDocument());
+    expect(screen.getByPlaceholderText('按项目筛选')).toBeInTheDocument();
+    expect(screen.getAllByRole('combobox').length).toBe(2);
+  });
+
+  it('filters by project name', async () => {
+    const listReviewTasks = vi.fn(async () => mockTaskList);
+    renderAt('/history', { listReviewTasks } as never);
+    const projectInput = screen.getByPlaceholderText('按项目筛选');
+    await userEvent.setup().type(projectInput, 'pay');
+    await waitFor(() => expect(listReviewTasks).toHaveBeenCalledWith(expect.objectContaining({ projectName: 'pay' })));
+  });
+
+  it('filters by risk level', async () => {
+    const listReviewTasks = vi.fn(async () => mockTaskList);
+    renderAt('/history', { listReviewTasks } as never);
+    const riskSelect = screen.getAllByRole('combobox')[0];
+    await userEvent.setup().selectOptions(riskSelect, 'high');
+    await waitFor(() => expect(listReviewTasks).toHaveBeenCalledWith(expect.objectContaining({ riskLevel: 'high' })));
+  });
+
+  it('filters by status', async () => {
+    const listReviewTasks = vi.fn(async () => mockTaskList);
+    renderAt('/history', { listReviewTasks } as never);
+    const statusSelect = screen.getAllByRole('combobox')[1];
+    await userEvent.setup().selectOptions(statusSelect, 'completed');
+    await waitFor(() => expect(listReviewTasks).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed' })));
+  });
+
+  it('shows empty state when no tasks', async () => {
+    renderAt('/history', historyClient([]) as never);
+    await waitFor(() => expect(screen.getByText('暂无 Review 记录。')).toBeInTheDocument());
+  });
+
+  it('handles load errors', async () => {
+    const listReviewTasks = vi.fn(async () => { throw new Error('Network error'); });
+    renderAt('/history', { listReviewTasks } as never);
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('加载历史记录失败'));
+  });
+});
+
