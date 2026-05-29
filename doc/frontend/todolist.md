@@ -4,12 +4,12 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
 
 ## P0 main review flow
 
-- [ ] Build application shell and navigation
+- [x] Build application shell and navigation
   - Scope: Create the SPA layout for 首页 / 工作台, 新建 Review, 历史记录, 规则配置, and report detail routes; include consistent header, sidebar or top navigation, loading and error shells.
   - Acceptance: Users can navigate between all MVP pages without dead links, and unknown routes show a safe fallback.
   - Tests: Route rendering tests for every page entry; manual browser smoke test for navigation.
   - Owner: frontend-engineer
-  - Signed-off: pending
+  - Signed-off: frontend-engineer
 
 - [ ] Define frontend API types and request layer
   - Scope: Add typed request and response models for review tasks, reports, issues, rules, and feedback; centralize API calls under one client layer.
