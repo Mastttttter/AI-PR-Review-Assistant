@@ -1,0 +1,146 @@
+from datetime import UTC, datetime
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
+from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from apr_backend.db.enums import RiskLevel, TaskStatus
+from apr_backend.db.models import ReviewTask
+from apr_backend.db.session import get_db
+from apr_backend.worker.queue import enqueue_review_job
+
+router = APIRouter(prefix="/api/review-tasks", tags=["review-tasks"])
+
+DemoOwnerHeader = Annotated[str, Header(alias="X-Demo-Owner", min_length=1, max_length=255)]
+DbSession = Annotated[Session, Depends(get_db)]
+
+
+class ReviewTaskCreate(BaseModel):
+    pr_title: str = Field(min_length=1, max_length=255)
+    pr_description: str | None = None
+    project_name: str | None = Field(default=None, max_length=255)
+    target_branch: str | None = Field(default=None, max_length=255)
+    developer_name: str | None = Field(default=None, max_length=255)
+    diff_content: str = Field(min_length=1, max_length=50_000)
+
+    @field_validator("pr_title", "diff_content")
+    @classmethod
+    def reject_blank_required_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Field cannot be blank")
+        return value
+
+
+class ReviewTaskCreateResponse(BaseModel):
+    task_id: str
+    status: TaskStatus
+
+
+class ReviewTaskDetailResponse(BaseModel):
+    id: str
+    pr_title: str
+    pr_description: str | None
+    project_name: str | None
+    target_branch: str | None
+    developer_name: str | None
+    demo_owner: str
+    diff_content: str
+    status: TaskStatus
+    risk_level: RiskLevel | None
+    issue_count: int
+    error_message: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ReviewTaskListItem(BaseModel):
+    id: str
+    pr_title: str
+    project_name: str | None
+    developer_name: str | None
+    status: TaskStatus
+    risk_level: RiskLevel | None
+    issue_count: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+@router.post("", response_model=ReviewTaskCreateResponse, status_code=status.HTTP_201_CREATED)
+def create_review_task(payload: ReviewTaskCreate, demo_owner: DemoOwnerHeader, db: DbSession) -> ReviewTaskCreateResponse:
+    task = ReviewTask(
+        pr_title=payload.pr_title.strip(),
+        pr_description=payload.pr_description,
+        project_name=payload.project_name,
+        target_branch=payload.target_branch,
+        developer_name=payload.developer_name,
+        demo_owner=demo_owner,
+        diff_content=payload.diff_content,
+        status=TaskStatus.pending,
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    enqueue_review_job(task.id)
+    return ReviewTaskCreateResponse(task_id=task.id, status=task.status)
+
+
+@router.get("", response_model=list[ReviewTaskListItem])
+def list_review_tasks(
+    demo_owner: DemoOwnerHeader,
+    db: DbSession,
+    status_filter: TaskStatus | None = Query(default=None, alias="status"),
+    project_name: str | None = None,
+) -> list[ReviewTask]:
+    statement = select(ReviewTask).where(ReviewTask.demo_owner == demo_owner, ReviewTask.deleted_at.is_(None))
+    if status_filter is not None:
+        statement = statement.where(ReviewTask.status == status_filter)
+    if project_name:
+        statement = statement.where(ReviewTask.project_name == project_name)
+    statement = statement.order_by(ReviewTask.created_at.desc())
+    return list(db.scalars(statement).all())
+
+
+@router.get("/{task_id}", response_model=ReviewTaskDetailResponse)
+def get_review_task(task_id: str, demo_owner: DemoOwnerHeader, db: DbSession) -> ReviewTask:
+    return get_owned_active_task(db, task_id, demo_owner)
+
+
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_review_task(task_id: str, demo_owner: DemoOwnerHeader, db: DbSession) -> Response:
+    task = get_owned_active_task(db, task_id, demo_owner)
+    task.status = TaskStatus.deleted
+    task.deleted_at = datetime.now(UTC)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{task_id}/rerun", response_model=ReviewTaskCreateResponse)
+def rerun_review_task(task_id: str, demo_owner: DemoOwnerHeader, db: DbSession) -> ReviewTaskCreateResponse:
+    task = get_owned_active_task(db, task_id, demo_owner)
+    task.status = TaskStatus.pending
+    task.risk_level = None
+    task.issue_count = 0
+    task.error_message = None
+    db.commit()
+    db.refresh(task)
+    enqueue_review_job(task.id)
+    return ReviewTaskCreateResponse(task_id=task.id, status=task.status)
+
+
+def get_owned_active_task(db: Session, task_id: str, demo_owner: str) -> ReviewTask:
+    task = db.scalar(
+        select(ReviewTask).where(
+            ReviewTask.id == task_id,
+            ReviewTask.demo_owner == demo_owner,
+            ReviewTask.deleted_at.is_(None),
+        )
+    )
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review task not found")
+    return task
