@@ -1,7 +1,8 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { ApiRequestError, apiClient } from './api';
-import type { ApiClient, CreateReviewTaskRequest } from './api';
+import type { ApiClient, CreateReviewTaskRequest, ReviewReport, ReviewTask, ReviewTaskStatus } from './api';
+import { issueSeverityLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels } from './api';
 
 const MAX_DIFF_LENGTH = 50_000;
 
@@ -14,11 +15,13 @@ const navigationItems = [
 ];
 
 type ReviewTaskApi = Pick<ApiClient, 'createReviewTask'>;
+type ReportClientApi = Pick<ApiClient, 'getReviewTask' | 'getReviewReport'>;
 
 type FormErrors = Partial<Record<keyof CreateReviewTaskRequest | 'submit', string>>;
 
 type AppProps = {
-  client?: ReviewTaskApi;
+  client?: ReviewTaskApi & ReportClientApi;
+  pollIntervalMs?: number;
 };
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -206,12 +209,144 @@ function RulesPage() {
   return <PageCard title="规则配置" description="配置团队基础 Review 规则，统一测试、安全、规范和文档要求。" />;
 }
 
-function ReportPage() {
+function ReportPage({ client, pollIntervalMs = 2_000 }: { client: ReportClientApi; pollIntervalMs?: number }) {
   const { taskId } = useParams();
+  const [task, setTask] = useState<ReviewTask | null>(null);
+  const [report, setReport] = useState<ReviewReport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const statusRef = useRef<ReviewTaskStatus | null>(null);
+
+  useEffect(() => {
+    if (!taskId) return;
+
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    async function poll() {
+      if (!active) return;
+      try {
+        const taskData = await client.getReviewTask(taskId!);
+        if (!active) return;
+
+        statusRef.current = taskData.status;
+        setTask(taskData);
+
+        if (taskData.status === 'completed') {
+          try {
+            const reportData = await client.getReviewReport(taskId!);
+            if (active) setReport(reportData);
+          } catch (e) {
+            if (active) setError(e instanceof ApiRequestError ? e.message : '获取报告失败，请稍后重试。');
+          }
+        } else if (taskData.status === 'failed') {
+          setError('Review 分析失败。任务上下文已保留，可返回重新提交。');
+        } else {
+          timer = setTimeout(poll, pollIntervalMs);
+        }
+      } catch (e) {
+        if (active) {
+          const message = e instanceof ApiRequestError ? e.message : '无法获取任务状态，请稍后重试。';
+          setError(message);
+        }
+      }
+    }
+
+    poll();
+
+    return () => { active = false; if (timer) clearTimeout(timer); };
+  }, [taskId, client]);
+
+  if (report) {
+    return <ReportDetailCard report={report} />;
+  }
+
+  if (error) {
+    return (
+      <PageCard title="Review 报告详情" description={`任务 ${taskId ?? '-'} 的审查状态与结果。`}>
+        <ErrorShell message={error} />
+        {task ? <TaskContextBar task={task} /> : null}
+      </PageCard>
+    );
+  }
+
+  const label = task ? reviewTaskStatusLabels[task.status] : '加载中';
+
   return (
-    <PageCard title="Review 报告详情" description={`展示任务 ${taskId ?? '未知'} 的摘要、风险等级、问题列表、规则命中和反馈状态。`}>
-      <LoadingShell label="报告生成中" />
-      <ErrorShell message="如果报告生成失败，页面会保留任务上下文并展示可恢复提示。" />
+    <PageCard title="Review 报告详情" description={`任务 ${taskId ?? '-'} 的审查状态与结果。`}>
+      <LoadingShell label={`${label}...`} />
+      {task ? <TaskContextBar task={task} /> : null}
+    </PageCard>
+  );
+}
+
+function TaskContextBar({ task }: { task: ReviewTask }) {
+  return (
+    <div className="task-context-bar">
+      <span>PR: {task.prTitle}</span>
+      {task.projectName ? <span>项目: {task.projectName}</span> : null}
+      {task.developerName ? <span>开发者: {task.developerName}</span> : null}
+      <span className={`status-pill-task pill-${task.status}`}>{reviewTaskStatusLabels[task.status]}</span>
+    </div>
+  );
+}
+
+function ReportDetailCard({ report }: { report: ReviewReport }) {
+  const sorted = [...report.issues].sort((a, b) => {
+    const order = { high: 0, medium: 1, low: 2 };
+    return (order[a.severity] ?? 2) - (order[b.severity] ?? 2);
+  });
+
+  return (
+    <PageCard title="Review 报告详情" description={`任务 ${report.task.id} 的审查结果。`}>
+      <div className="report-detail">
+        <TaskContextBar task={report.task} />
+
+        <section className="report-section">
+          <h4 className="report-section-title">AI 摘要</h4>
+          <p>{report.summary.purpose}</p>
+          {report.summary.changedModules.length > 0 ? <p className="report-meta">涉及模块: {report.summary.changedModules.join(', ')}</p> : null}
+          {report.summary.keyFiles.length > 0 ? <p className="report-meta">关键文件: {report.summary.keyFiles.join(', ')}</p> : null}
+        </section>
+
+        <section className="report-section">
+          <h4 className="report-section-title">
+            风险等级
+            <span className={`risk-badge risk-${report.risk.level}`}>{riskLevelLabels[report.risk.level]}</span>
+          </h4>
+          <ul className="reason-list">
+            {report.risk.reasons.map((reason, i) => <li key={i}>{reason}</li>)}
+          </ul>
+        </section>
+
+        <section className="report-section">
+          <h4 className="report-section-title">问题统计</h4>
+          <div className="issue-stat-grid">
+            <div><strong>{report.issueStats.total}</strong><span>总计</span></div>
+            <div className="stat-high"><strong>{report.issueStats.high}</strong><span>高风险</span></div>
+            <div className="stat-medium"><strong>{report.issueStats.medium}</strong><span>中风险</span></div>
+            <div className="stat-low"><strong>{report.issueStats.low}</strong><span>低风险</span></div>
+          </div>
+        </section>
+
+        <section className="report-section">
+          <h4 className="report-section-title">问题列表</h4>
+          {sorted.length === 0 ? <p className="report-meta">未发现问题。</p> : null}
+          <ol className="issue-list">
+            {sorted.map((issue) => (
+              <li key={issue.id} className={`issue-card severity-${issue.severity}`}>
+                <div className="issue-header">
+                  <span className="issue-severity-badge">{issueSeverityLabels[issue.severity]}</span>
+                  <span className="issue-type-badge">{issueTypeLabels[issue.type]}</span>
+                  <strong className="issue-title">{issue.title}</strong>
+                </div>
+                <p className="issue-description">{issue.description}</p>
+                {issue.location.filePath ? <p className="issue-location">位置: {issue.location.filePath}{issue.location.lineHint ? ` (${issue.location.lineHint})` : ''}</p> : null}
+                <p className="issue-suggestion">建议: {issue.suggestion}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </div>
     </PageCard>
   );
 }
@@ -238,7 +373,7 @@ export function ErrorShell({ message }: { message: string }) {
   );
 }
 
-export function App({ client = apiClient }: AppProps) {
+export function App({ client = apiClient, pollIntervalMs }: AppProps) {
   return (
     <Shell>
       <Routes>
@@ -246,7 +381,7 @@ export function App({ client = apiClient }: AppProps) {
         <Route path="/reviews/new" element={<NewReviewPage client={client} />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/rules" element={<RulesPage />} />
-        <Route path="/reviews/:taskId" element={<ReportPage />} />
+        <Route path="/reviews/:taskId" element={<ReportPage client={client} pollIntervalMs={pollIntervalMs} />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Shell>

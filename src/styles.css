@@ -358,6 +358,181 @@ h3 { font-size: clamp(2.2rem, 5vw, 5.2rem); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.task-context-bar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.status-pill-task {
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.pill-pending { background: rgba(122, 167, 183, 0.22); color: var(--steel); }
+.pill-running { background: rgba(226, 255, 99, 0.14); color: var(--accent); }
+.pill-completed { background: rgba(80, 220, 120, 0.14); color: #50dc78; }
+.pill-failed { background: rgba(255, 107, 74, 0.14); color: var(--danger); }
+
+.report-detail {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.report-section {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.report-section-title {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.report-meta {
+  margin: 0.25rem 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.risk-badge {
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.risk-low { background: rgba(80, 220, 120, 0.14); color: #50dc78; }
+.risk-medium { background: rgba(226, 180, 60, 0.14); color: #e2b43c; }
+.risk-high { background: rgba(255, 107, 74, 0.14); color: var(--danger); }
+
+.reason-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.8;
+}
+
+.issue-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.issue-stat-grid div {
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.issue-stat-grid strong {
+  display: block;
+  font-size: 1.6rem;
+  color: var(--ink);
+}
+
+.issue-stat-grid span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.stat-high strong { color: var(--danger); }
+.stat-medium strong { color: #e2b43c; }
+.stat-low strong { color: #50dc78; }
+
+.issue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.issue-card {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.issue-card.severity-high { border-color: rgba(255, 107, 74, 0.35); }
+
+.issue-header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.issue-severity-badge,
+.issue-type-badge {
+  border-radius: 0.5rem;
+  padding: 0.18rem 0.55rem;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.issue-severity-badge {
+  background: rgba(255, 107, 74, 0.14);
+  color: var(--danger);
+}
+
+.issue-type-badge {
+  background: rgba(122, 167, 183, 0.14);
+  color: var(--steel);
+}
+
+.issue-title {
+  font-size: 0.97rem;
+}
+
+.issue-description {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.issue-location {
+  margin: 0.35rem 0 0;
+  color: var(--steel);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.84rem;
+}
+
+.issue-suggestion {
+  margin: 0.5rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-left: 2px solid var(--accent);
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 1ms !important;
