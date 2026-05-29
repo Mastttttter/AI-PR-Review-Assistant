@@ -52,6 +52,7 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Tests: Worker integration tests using MockLLM for successful Review, LLM failure, invalid AI output, and retry or rerun behavior.
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-30
+  - Verified: verify-engineer confirmed AI review generation produces correct output matching all frontend criteria on 2026-05-30.
 
 - [x] Validate and normalize AI Review output
   - Scope: Enforce structured JSON schema for summary, risk level, risk reasons, issues, severity, location, suggestion, confidence, and matched rule IDs using English technical enum values.
