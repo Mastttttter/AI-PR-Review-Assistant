@@ -15,6 +15,7 @@ from apr_backend.services.llm_adapter import (
     LLMTimeoutError,
     MockLLMProvider,
     OpenAICompatibleProvider,
+    _extract_rule_ids_from_prompt,
     _redact_for_log,
     create_llm_provider,
 )
@@ -60,6 +61,93 @@ class TestMockLLMProvider:
         r2 = provider.generate_review("prompt b")
         assert r1 == r2
         assert r1 is not r2
+
+    def test_no_rule_matches_returns_empty_matched_rule_ids(self) -> None:
+        result = MockLLMProvider().generate_review(SAMPLE_PROMPT)
+        assert result["issues"][0]["matched_rule_ids"] == []
+
+    def test_with_rule_matches_includes_rule_ids(self) -> None:
+        prompt_with_rules = """\
+Some prompt content
+
+## Pre-matched Rule Results (for context)
+These rules were matched deterministically. Include their rule_id values in matched_rule_ids for any related issues.
+[
+  {"rule_id": "rule-uuid-1", "rule_name": "Test Rule 1", "description": "...", "file_path": "...", "line_hint": "..."},
+  {"rule_id": "rule-uuid-2", "rule_name": "Test Rule 2", "description": "...", "file_path": "...", "line_hint": "..."}
+]
+
+## PR Context
+PR Title: Test
+"""
+        result = MockLLMProvider().generate_review(prompt_with_rules)
+        assert result["issues"][0]["matched_rule_ids"] == ["rule-uuid-1", "rule-uuid-2"]
+
+    def test_empty_rule_array_returns_empty_matched_rule_ids(self) -> None:
+        prompt_with_empty_rules = """\
+Some prompt content
+
+## Pre-matched Rule Results (for context)
+These rules were matched deterministically. Include their rule_id values in matched_rule_ids for any related issues.
+[]
+
+## PR Context
+PR Title: Test
+"""
+        result = MockLLMProvider().generate_review(prompt_with_empty_rules)
+        assert result["issues"][0]["matched_rule_ids"] == []
+
+
+class TestExtractRuleIdsFromPrompt:
+    def test_extracts_single_rule_id(self) -> None:
+        prompt = """\
+## Pre-matched Rule Results (for context)
+[
+  {"rule_id": "abc-123", "rule_name": "Test"}
+]
+
+## PR Context
+"""
+        assert _extract_rule_ids_from_prompt(prompt) == ["abc-123"]
+
+    def test_extracts_multiple_rule_ids(self) -> None:
+        prompt = """\
+## Pre-matched Rule Results (for context)
+[
+  {"rule_id": "id-1", "rule_name": "Rule 1"},
+  {"rule_id": "id-2", "rule_name": "Rule 2"},
+  {"rule_id": "id-3", "rule_name": "Rule 3"}
+]
+"""
+        assert _extract_rule_ids_from_prompt(prompt) == ["id-1", "id-2", "id-3"]
+
+    def test_returns_empty_for_no_pre_matched_section(self) -> None:
+        prompt = "Just a simple prompt without rule results."
+        assert _extract_rule_ids_from_prompt(prompt) == []
+
+    def test_returns_empty_for_empty_array(self) -> None:
+        prompt = """\
+## Pre-matched Rule Results (for context)
+[]
+"""
+        assert _extract_rule_ids_from_prompt(prompt) == []
+
+    def test_handles_malformed_json_gracefully(self) -> None:
+        prompt = """\
+## Pre-matched Rule Results (for context)
+[not valid json
+"""
+        assert _extract_rule_ids_from_prompt(prompt) == []
+
+    def test_skips_entries_without_rule_id(self) -> None:
+        prompt = """\
+## Pre-matched Rule Results (for context)
+[
+  {"rule_id": "valid-id", "rule_name": "Has ID"},
+  {"rule_name": "Missing ID"}
+]
+"""
+        assert _extract_rule_ids_from_prompt(prompt) == ["valid-id"]
 
 
 class TestOpenAICompatibleProvider:
