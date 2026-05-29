@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -39,9 +40,24 @@ class LLMProvider(ABC):
         ...
 
 
+def _extract_rule_ids_from_prompt(prompt: str) -> list[str]:
+    """Extract rule_id values from the Pre-matched Rule Results section of the prompt."""
+    match = re.search(r"## Pre-matched Rule Results.*?\n(\[.*?\])\s*\n", prompt, re.DOTALL)
+    if not match:
+        return []
+    try:
+        rules = json.loads(match.group(1))
+        if not isinstance(rules, list):
+            return []
+        return [r["rule_id"] for r in rules if isinstance(r, dict) and "rule_id" in r]
+    except (json.JSONDecodeError, KeyError):
+        return []
+
+
 class MockLLMProvider(LLMProvider):
     def generate_review(self, prompt: str) -> dict[str, Any]:
         logger.info("MockLLM generate_review called, prompt length=%d", len(prompt))
+        matched_rule_ids = _extract_rule_ids_from_prompt(prompt)
         return {
             "summary": {
                 "purpose": "Mock review: this PR adds a new feature.",
@@ -67,7 +83,7 @@ class MockLLMProvider(LLMProvider):
                     },
                     "suggestion": "Add validation for the user parameter before use.",
                     "confidence": "medium",
-                    "matched_rule_ids": [],
+                    "matched_rule_ids": matched_rule_ids,
                 }
             ],
         }
