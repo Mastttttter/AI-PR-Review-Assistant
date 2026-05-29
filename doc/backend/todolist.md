@@ -83,12 +83,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-30
 
-- [ ] Implement history filtering and dashboard metrics API
+- [x] Implement history filtering and dashboard metrics API
   - Scope: Support task list filters for project, risk level, status, and date range; expose lightweight counts for recent tasks, risk distribution, issue counts, useful rate, false-positive rate, and adoption rate where data exists.
   - Acceptance: Frontend can render history and dashboard cards without complex analytics; metrics remain accurate for soft-deleted records.
   - Tests: Query tests for each filter; metrics aggregation tests with mixed task statuses, severities, and feedback states.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-30
 
 ## Cross-cutting backend quality
 

@@ -196,4 +196,21 @@ Verification:
 
 Next backend milestone:
 
-- Implement the history filtering and dashboard metrics API.
+## Implement history filtering and dashboard metrics API
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- `GET /api/metrics/dashboard` returning total tasks, tasks in last 30 days, total issues, risk distribution, useful/false_positive/adoption rates.
+- Added `risk_level`, `created_after`, `created_before` query filters to task list endpoint.
+- Owner-scoped metrics; deleted tasks/their issues/feedback excluded; zero-division safe rates.
+
+Verification:
+
+- 162 tests pass (12 metrics + 150 prior).
+- Metrics tests cover: risk level filter, date range filters, combined filters, deleted exclusion, total tasks, risk distribution, 30-day window, issue count, feedback rates, empty dashboard, and owner isolation.
+
+Next backend milestone:
+
+- Implement baseline authentication and logging guardrails.
