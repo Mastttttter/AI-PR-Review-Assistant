@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, date, datetime
 from typing import Annotated
 
@@ -6,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from apr_backend.db.enums import Confidence, FeedbackStatus, IssueType, RiskLevel, TaskStatus
+from apr_backend.db.enums import Confidence, FeedbackStatus, IssueType, RiskLevel, Severity, TaskStatus
 from apr_backend.db.models import ReviewIssue, ReviewTask
 from apr_backend.db.session import get_db
 from apr_backend.worker.queue import enqueue_review_job
@@ -142,24 +143,7 @@ def rerun_review_task(task_id: str, demo_owner: DemoOwnerHeader, db: DbSession) 
     return ReviewTaskCreateResponse(task_id=task.id, status=task.status)
 
 
-class ReportIssueResponse(BaseModel):
-    id: str
-    title: str
-    issue_type: IssueType
-    severity: str
-    description: str
-    file_path: str | None
-    line_hint: str | None
-    code_snippet: str | None
-    suggestion: str
-    confidence: Confidence
-    matched_rule_ids: list[str]
-    feedback_status: FeedbackStatus
-
-    model_config = {"from_attributes": True}
-
-
-class ReportResponse(BaseModel):
+class ReportTaskNested(BaseModel):
     id: str
     pr_title: str
     pr_description: str | None
@@ -168,18 +152,111 @@ class ReportResponse(BaseModel):
     developer_name: str | None
     status: TaskStatus
     risk_level: RiskLevel | None
-    error_message: str | None
+    issue_count: int
     created_at: datetime
     updated_at: datetime
-    summary: str | None
-    risk_reasons: list[str]
-    issue_stats: dict
-    issues: list[ReportIssueResponse]
 
     model_config = {"from_attributes": True}
 
 
+class ReportSummaryResponse(BaseModel):
+    purpose: str = ""
+    changed_modules: list[str] = []
+    key_files: list[str] = []
+    business_impact: str = ""
+    test_or_security_notes: str = ""
+
+
+class ReportRiskResponse(BaseModel):
+    level: RiskLevel | None = None
+    reasons: list[str] = []
+
+
+class IssueLocationResponse(BaseModel):
+    file_path: str | None = None
+    line_hint: str | None = None
+    code_snippet: str | None = None
+
+
+class ReportIssueResponse(BaseModel):
+    id: str
+    task_id: str
+    report_id: str
+    title: str
+    type: IssueType
+    severity: Severity
+    description: str
+    location: IssueLocationResponse
+    suggestion: str
+    confidence: Confidence
+    matched_rule_ids: list[str]
+    feedback_status: FeedbackStatus
+    created_at: datetime
+
+
+class IssueStatsResponse(BaseModel):
+    total: int = 0
+    high: int = 0
+    medium: int = 0
+    low: int = 0
+    rule_hits: int = 0
+
+
+class ReportResponse(BaseModel):
+    id: str
+    task: ReportTaskNested
+    summary: ReportSummaryResponse | None = None
+    risk: ReportRiskResponse
+    issue_stats: IssueStatsResponse
+    issues: list[ReportIssueResponse]
+    created_at: datetime
+
+
 _SEVERITY_ORDER: dict[str, int] = {"high": 0, "medium": 1, "low": 2}
+
+
+def _parse_summary(raw: str | None) -> ReportSummaryResponse | None:
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return ReportSummaryResponse(purpose=raw)
+    if not isinstance(data, dict):
+        return ReportSummaryResponse(purpose=raw)
+    return ReportSummaryResponse(
+        purpose=data.get("purpose", ""),
+        changed_modules=data.get("changed_modules", []),
+        key_files=data.get("key_files", []),
+        business_impact=data.get("business_impact", ""),
+        test_or_security_notes=data.get("test_or_security_notes", ""),
+    )
+
+
+def _build_issue_response(issue: ReviewIssue) -> ReportIssueResponse:
+    sev = issue.severity.value if hasattr(issue.severity, "value") else str(issue.severity)
+    itype = issue.issue_type.value if hasattr(issue.issue_type, "value") else str(issue.issue_type)
+    conf = issue.confidence.value if hasattr(issue.confidence, "value") else str(issue.confidence)
+    fb = issue.feedback_status.value if hasattr(issue.feedback_status, "value") else str(issue.feedback_status)
+    return ReportIssueResponse(
+        id=issue.id,
+        task_id=issue.task_id,
+        report_id=issue.report_id,
+        title=issue.title,
+        type=IssueType(itype),
+        severity=Severity(sev),
+        description=issue.description,
+        location=IssueLocationResponse(
+            file_path=issue.file_path,
+            line_hint=issue.line_hint,
+            code_snippet=issue.code_snippet,
+        ),
+        suggestion=issue.suggestion,
+        confidence=Confidence(conf),
+        matched_rule_ids=issue.matched_rule_ids or [],
+        feedback_status=FeedbackStatus(fb),
+        created_at=issue.created_at,
+    )
 
 
 @router.get("/{task_id}/report", response_model=ReportResponse)
@@ -187,19 +264,31 @@ def get_review_report(task_id: str, demo_owner: DemoOwnerHeader, db: DbSession) 
     task = get_owned_active_task(db, task_id, demo_owner)
 
     report = task.report
-    summary = report.summary if report and report.summary else None
+
+    summary = _parse_summary(report.summary if report else None)
+
+    risk_level = report.risk_level if report else None
     risk_reasons = report.risk_reasons if report and report.risk_reasons else []
-    issue_stats = report.issue_stats if report and report.issue_stats else {}
+    risk = ReportRiskResponse(level=risk_level, reasons=risk_reasons)
 
-    issues = db.scalars(
-        select(ReviewIssue).where(
-            ReviewIssue.task_id == task_id,
-        ).order_by(ReviewIssue.created_at)
-    ).all()
+    issues = list(db.scalars(
+        select(ReviewIssue).where(ReviewIssue.task_id == task_id).order_by(ReviewIssue.created_at)
+    ).all())
 
-    sorted_issues = sorted(issues, key=lambda i: _SEVERITY_ORDER.get(i.severity.value if hasattr(i.severity, 'value') else str(i.severity), 99))
+    sorted_issues = sorted(issues, key=lambda i: _SEVERITY_ORDER.get(i.severity.value if hasattr(i.severity, "value") else str(i.severity), 99))
+    issue_responses = [_build_issue_response(i) for i in sorted_issues]
 
-    return ReportResponse(
+    rule_hits = sum(1 for i in issues if i.matched_rule_ids)
+    raw_stats = report.issue_stats if report and report.issue_stats else {}
+    issue_stats = IssueStatsResponse(
+        total=raw_stats.get("total", len(issues)),
+        high=raw_stats.get("high", sum(1 for i in issues if (i.severity.value if hasattr(i.severity, "value") else str(i.severity)) == "high")),
+        medium=raw_stats.get("medium", sum(1 for i in issues if (i.severity.value if hasattr(i.severity, "value") else str(i.severity)) == "medium")),
+        low=raw_stats.get("low", sum(1 for i in issues if (i.severity.value if hasattr(i.severity, "value") else str(i.severity)) == "low")),
+        rule_hits=rule_hits,
+    )
+
+    task_nested = ReportTaskNested(
         id=task.id,
         pr_title=task.pr_title,
         pr_description=task.pr_description,
@@ -208,13 +297,21 @@ def get_review_report(task_id: str, demo_owner: DemoOwnerHeader, db: DbSession) 
         developer_name=task.developer_name,
         status=task.status,
         risk_level=task.risk_level,
-        error_message=task.error_message,
+        issue_count=task.issue_count,
         created_at=task.created_at,
         updated_at=task.updated_at,
+    )
+
+    report_created_at = report.created_at if report else task.created_at
+
+    return ReportResponse(
+        id=report.id if report else task.id,
+        task=task_nested,
         summary=summary,
-        risk_reasons=risk_reasons,
+        risk=risk,
         issue_stats=issue_stats,
-        issues=sorted_issues,
+        issues=issue_responses,
+        created_at=report_created_at,
     )
 
 
