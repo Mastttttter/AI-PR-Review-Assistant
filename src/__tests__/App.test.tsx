@@ -26,7 +26,11 @@ function neverRuleMutation(..._args: unknown[]): Promise<never> {
   throw new Error('should not be called');
 }
 
-function renderAt(path: string, client: Record<string, unknown> = { createReviewTask: neverCalled, getReviewTask: neverCalled, getReviewReport: neverCalled, listReviewTasks: neverTasks, listReviewRules: emptyRules, createReviewRule: neverRuleMutation, updateReviewRule: neverRuleMutation, enableReviewRule: neverRuleMutation, disableReviewRule: neverRuleMutation, deleteReviewRule: neverRuleMutation }, pollIntervalMs?: number) {
+function neverFeedback(..._args: unknown[]): Promise<never> {
+  throw new Error('should not be called');
+}
+
+function renderAt(path: string, client: Record<string, unknown> = { createReviewTask: neverCalled, getReviewTask: neverCalled, getReviewReport: neverCalled, listReviewTasks: neverTasks, listReviewRules: emptyRules, createReviewRule: neverRuleMutation, updateReviewRule: neverRuleMutation, enableReviewRule: neverRuleMutation, disableReviewRule: neverRuleMutation, deleteReviewRule: neverRuleMutation, updateIssueFeedback: neverFeedback }, pollIntervalMs?: number) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <App client={client as never} pollIntervalMs={pollIntervalMs} />
@@ -84,6 +88,7 @@ describe('Review status polling flow', () => {
       createReviewTask: neverCalled,
       getReviewTask,
       getReviewReport,
+      updateIssueFeedback: neverFeedback,
     } as never, 0);
 
     // Initial render shows loading, then first poll resolves to running
@@ -146,7 +151,7 @@ describe('Review status polling flow', () => {
 function completedClient(report: ReviewReport) {
   const getReviewTask = vi.fn(async () => ({ ...report.task, status: 'completed' as const }));
   const getReviewReport = vi.fn(async () => report);
-  return { createReviewTask: neverCalled, getReviewTask, getReviewReport };
+  return { createReviewTask: neverCalled, getReviewTask, getReviewReport, updateIssueFeedback: neverFeedback };
 }
 
 describe('Review report detail page', () => {
@@ -209,7 +214,8 @@ describe('Review report detail page', () => {
     await waitFor(() => expect(screen.getByText('问题列表')).toBeInTheDocument());
     expect(screen.getByText('高置信度')).toBeInTheDocument();
     expect(screen.getByText('中置信度')).toBeInTheDocument();
-    expect(screen.getByText('有用')).toBeInTheDocument();
+    const feedbackBadge = document.querySelector('.feedback-badge');
+    expect(feedbackBadge).toHaveTextContent('有用');
   });
 
   it('renders code location with snippet', async () => {
