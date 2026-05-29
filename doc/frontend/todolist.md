@@ -25,12 +25,12 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer
 
-- [ ] Implement Review status polling flow
+- [x] Implement Review status polling flow
   - Scope: Poll task and report endpoints after creation and while viewing an unfinished task; show pending, running, completed, and failed states.
   - Acceptance: Completed tasks automatically reveal the report; failed tasks show the failure state without losing the task context; polling assumes task creation returns only task id and status.
   - Tests: Mocked polling tests for pending-to-completed and running-to-failed transitions; manual browser test with delayed MockLLM-backed API.
   - Owner: frontend-engineer
-  - Signed-off: pending
+  - Signed-off: frontend-engineer
 
 - [ ] Implement structured Review report detail page
   - Scope: Show PR basics, status, AI summary, risk level with reasons, issue statistics, grouped issue list, matched rules, suggestions, confidence, and code location snippets.

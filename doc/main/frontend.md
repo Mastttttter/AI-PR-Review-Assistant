@@ -55,6 +55,25 @@ Verification:
 - `pnpm test` passes with 17 tests (4 review form tests).
 - `pnpm build` passes.
 
+## Implement Review status polling flow
+
+Status: completed by frontend-engineer on 2026-05-29.
+
+Delivered scope:
+
+- `ReportPage` with `setTimeout`-based polling at configurable 2s interval, auto-cleanup on unmount.
+- Polls task status endpoint; on completed, fetches report; on failed, preserves task context with error message.
+- `ReportDetailCard` with AI summary, risk level badge with reasons, issue statistics grid, and severity-sorted issue list.
+- `TaskContextBar` preserves PR title, project, developer, and status pill on all non-completed states.
+- Status pills and risk badges styled per state (pending/steel, running/accent, completed/green, failed/red, risk low/medium/high).
+
+Verification:
+
+- `pnpm typecheck` passes.
+- `pnpm test` passes with 19 tests (4 polling flow tests).
+- `pnpm build` passes.
+- Polling tests cover: running-to-completed auto-reveal, failed context preservation, network error handling, and pending state display.
+
 Next frontend milestone:
 
-- Implement the Review status polling flow so users see live task progress after form submission.
+- Implement the structured Review report detail page with full issue cards, confidence, and feedback controls.
