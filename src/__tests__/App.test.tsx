@@ -18,7 +18,15 @@ async function neverTasks(_query?: ReviewTaskListQuery): Promise<ReviewTask[]> {
   throw new Error('should not be called');
 }
 
-function renderAt(path: string, client: Record<string, unknown> = { createReviewTask: neverCalled, getReviewTask: neverCalled, getReviewReport: neverCalled, listReviewTasks: neverTasks }, pollIntervalMs?: number) {
+async function emptyRules(): Promise<[]> {
+  return [];
+}
+
+function neverRuleMutation(..._args: unknown[]): Promise<never> {
+  throw new Error('should not be called');
+}
+
+function renderAt(path: string, client: Record<string, unknown> = { createReviewTask: neverCalled, getReviewTask: neverCalled, getReviewReport: neverCalled, listReviewTasks: neverTasks, listReviewRules: emptyRules, createReviewRule: neverRuleMutation, updateReviewRule: neverRuleMutation, enableReviewRule: neverRuleMutation, disableReviewRule: neverRuleMutation, deleteReviewRule: neverRuleMutation }, pollIntervalMs?: number) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <App client={client as never} pollIntervalMs={pollIntervalMs} />
