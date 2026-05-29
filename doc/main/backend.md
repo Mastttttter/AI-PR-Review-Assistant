@@ -103,4 +103,23 @@ Verification:
 
 Next backend milestone:
 
-- Implement the AI Review orchestration worker that ties together the full pipeline.
+## Validate and normalize AI Review output
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- `validate_ai_output` module with typed dataclasses for ValidatedSummary, ValidatedRisk, ValidatedIssue, and ValidatedReview.
+- Enum normalization for risk level, issue type, severity, and confidence with safe defaults.
+- Type coercion for strings, lists, and locations; graceful degradation for non-dict/non-list inputs.
+- Issue sorting by severity (high first), stale/unknown rule ID stripping, missing description filtering.
+- Raw AI output preserved alongside validated result for debugging.
+
+Verification:
+
+- `uv run python -m pytest tests/` passes with 95 tests (23 validator tests + 72 prior).
+- Validator tests cover: valid output acceptance, invalid enum normalization, missing field defaults, issue re-sorting, stale rule ID filtering, non-dict/none/list/string input, type coercion, and raw preservation.
+
+Next backend milestone:
+
+- Implement the report retrieval API and rule CRUD API.

@@ -53,12 +53,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: pending
 
-- [ ] Validate and normalize AI Review output
+- [x] Validate and normalize AI Review output
   - Scope: Enforce structured JSON schema for summary, risk level, risk reasons, issues, severity, location, suggestion, confidence, and matched rule IDs using English technical enum values.
   - Acceptance: Invalid enum values, missing required fields, high/medium issues without suggestions, and unknown matched rules are rejected or normalized safely; API responses keep English values for frontend label mapping.
   - Tests: Schema validation tests for valid MockLLM output, missing fields, invalid enums, unsorted issues, missing suggestions, and stale rule IDs.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-30
 
 - [ ] Implement report retrieval API
   - Scope: Return structured report details with PR basics, status, summary, risk, reasons, issue statistics, grouped/sorted issues, matched rules, suggestions, and feedback states.
