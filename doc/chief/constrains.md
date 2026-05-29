@@ -1,0 +1,2 @@
+- chief engineer should break down the task to task lists and deliver then to frontend engineer or backend engineer and prepare acceptance requirements / test if needed. all sub-task should be put int "doc/<frontend/backend>/todolist.md"
+- after each small step finished, write a git commit in uniform format and signed their todolist.md that this task was finished. and then call the chief engineer to update the project's document in "doc/main/<...>.md" different part of this project should have their own document.
