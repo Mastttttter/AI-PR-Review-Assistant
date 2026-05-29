@@ -125,25 +125,41 @@ def _create_completed_task(session_factory) -> str:
 
 
 class TestCompletedReport:
-    def test_returns_report_with_pr_basics(self, client, session_factory) -> None:
+    def test_returns_report_with_nested_task(self, client, session_factory) -> None:
         tid = _create_completed_task(session_factory)
         response = client.get(f"/api/review-tasks/{tid}/report", headers=OWNER)
 
         assert response.status_code == 200
         body = response.json()
-        assert body["pr_title"] == "Add token refresh"
-        assert body["pr_description"] == "Refresh expired tokens."
-        assert body["project_name"] == "user-center"
-        assert body["status"] == "completed"
+        task = body["task"]
+        assert task["id"] == tid
+        assert task["pr_title"] == "Add token refresh"
+        assert task["pr_description"] == "Refresh expired tokens."
+        assert task["project_name"] == "user-center"
+        assert task["status"] == "completed"
+        assert task["risk_level"] == "medium"
+        assert task["issue_count"] == 3
 
-    def test_summary_and_risk_are_populated(self, client, session_factory) -> None:
+    def test_summary_is_parsed_object(self, client, session_factory) -> None:
         tid = _create_completed_task(session_factory)
         response = client.get(f"/api/review-tasks/{tid}/report", headers=OWNER)
 
         body = response.json()
-        assert body["summary"] == REPORT_SUMMARY
-        assert body["risk_level"] == "medium"
-        assert body["risk_reasons"] == ["Modifies auth logic."]
+        summary = body["summary"]
+        assert summary["purpose"] == "Add token refresh logic."
+        assert summary["changed_modules"] == ["auth"]
+        assert summary["key_files"] == ["src/auth.py"]
+        assert summary["business_impact"] == "Users stay logged in longer."
+        assert summary["test_or_security_notes"] == "Tests included."
+
+    def test_risk_is_nested_object(self, client, session_factory) -> None:
+        tid = _create_completed_task(session_factory)
+        response = client.get(f"/api/review-tasks/{tid}/report", headers=OWNER)
+
+        body = response.json()
+        risk = body["risk"]
+        assert risk["level"] == "medium"
+        assert risk["reasons"] == ["Modifies auth logic."]
 
     def test_issues_sorted_by_severity_high_first(self, client, session_factory) -> None:
         tid = _create_completed_task(session_factory)
@@ -153,7 +169,7 @@ class TestCompletedReport:
         severities = [i["severity"] for i in body["issues"]]
         assert severities == ["high", "medium", "low"]
 
-    def test_issue_stats_are_correct(self, client, session_factory) -> None:
+    def test_issue_stats_include_rule_hits(self, client, session_factory) -> None:
         tid = _create_completed_task(session_factory)
         response = client.get(f"/api/review-tasks/{tid}/report", headers=OWNER)
 
@@ -162,24 +178,38 @@ class TestCompletedReport:
         assert stats["high"] == 1
         assert stats["medium"] == 1
         assert stats["low"] == 1
+        assert stats["rule_hits"] == 1
 
-    def test_issues_contain_all_prd_fields(self, client, session_factory) -> None:
+    def test_issues_contain_all_frontend_fields(self, client, session_factory) -> None:
         tid = _create_completed_task(session_factory)
         response = client.get(f"/api/review-tasks/{tid}/report", headers=OWNER)
 
         issue = response.json()["issues"][0]
         assert "id" in issue
+        assert "task_id" in issue
+        assert "report_id" in issue
         assert "title" in issue
-        assert "issue_type" in issue
+        assert "type" in issue
         assert "severity" in issue
         assert "description" in issue
         assert "suggestion" in issue
         assert "confidence" in issue
-        assert "file_path" in issue
-        assert "line_hint" in issue
-        assert "code_snippet" in issue
+        assert "location" in issue
+        assert "file_path" in issue["location"]
+        assert "line_hint" in issue["location"]
+        assert "code_snippet" in issue["location"]
         assert "matched_rule_ids" in issue
         assert "feedback_status" in issue
+        assert "created_at" in issue
+
+    def test_issue_location_is_nested(self, client, session_factory) -> None:
+        tid = _create_completed_task(session_factory)
+        response = client.get(f"/api/review-tasks/{tid}/report", headers=OWNER)
+
+        issue = response.json()["issues"][0]
+        assert issue["location"]["file_path"] == "src/auth.py"
+        assert issue["location"]["line_hint"] == "line 10"
+        assert issue["location"]["code_snippet"] == "login()"
 
     def test_feedback_status_reflected(self, client, session_factory) -> None:
         tid = _create_completed_task(session_factory)
@@ -189,6 +219,14 @@ class TestCompletedReport:
         assert feedbacks["Low severity issue"] == "useful"
         assert feedbacks["Medium severity issue"] == "adopted"
         assert feedbacks["High severity issue"] == "none"
+
+    def test_report_id_and_created_at_from_report(self, client, session_factory) -> None:
+        tid = _create_completed_task(session_factory)
+        response = client.get(f"/api/review-tasks/{tid}/report", headers=OWNER)
+
+        body = response.json()
+        assert body["id"] is not None
+        assert body["created_at"] is not None
 
 
 class TestPendingTask:
@@ -203,14 +241,14 @@ class TestPendingTask:
 
         assert response.status_code == 200
         body = response.json()
-        assert body["status"] == "pending"
+        assert body["task"]["status"] == "pending"
         assert body["summary"] is None
-        assert body["risk_reasons"] == []
+        assert body["risk"]["reasons"] == []
         assert body["issues"] == []
 
 
 class TestFailedTask:
-    def test_failed_task_returns_error_message(self, client, session_factory) -> None:
+    def test_failed_task_returns_failed_status(self, client, session_factory) -> None:
         with session_factory() as session:
             task = ReviewTask(
                 pr_title="Failed", demo_owner="owner-a", diff_content="diff",
@@ -224,8 +262,7 @@ class TestFailedTask:
 
         assert response.status_code == 200
         body = response.json()
-        assert body["status"] == "failed"
-        assert body["error_message"] == "LLM call failed."
+        assert body["task"]["status"] == "failed"
 
 
 class TestAccessControl:
@@ -268,5 +305,7 @@ class TestEmptyIssues:
 
         response = client.get(f"/api/review-tasks/{tid}/report", headers=OWNER)
         assert response.status_code == 200
-        assert response.json()["issues"] == []
-        assert response.json()["risk_level"] == "low"
+        body = response.json()
+        assert body["issues"] == []
+        assert body["risk"]["level"] == "low"
+        assert body["issue_stats"]["rule_hits"] == 0
