@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field, RedisDsn
+from pydantic import Field, RedisDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     redis_url: RedisDsn = Field(default="redis://localhost:6379/0")
     database_url: str = "sqlite:///./apr_backend.db"
     review_queue_name: str = "review"
+
+    llm_api_key: SecretStr | None = Field(default=None)
+    llm_base_url: str = "https://api.openai.com/v1"
+    llm_model: str = "gpt-4o-mini"
+    llm_timeout: int = Field(default=60, ge=1)
+    llm_mock_enabled: bool = False
 
 
 @lru_cache

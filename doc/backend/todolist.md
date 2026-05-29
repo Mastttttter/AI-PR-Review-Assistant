@@ -39,12 +39,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: pending
 
-- [ ] Implement LLM adapter and mock provider
+- [x] Implement LLM adapter and mock provider
   - Scope: Add provider abstraction, OpenAI-compatible adapter shape, mock adapter for tests/demo, server-side API key handling, timeout handling, and no frontend LLM exposure.
   - Acceptance: Business code calls the adapter interface only; MockLLM is the canonical acceptance-test provider; tests can run without a real LLM; full diff content is not logged.
   - Tests: Unit tests for MockLLM provider, adapter error handling, timeout path, and redacted logging behavior.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-30
 
 - [ ] Implement AI Review orchestration worker
   - Scope: Process queued Review jobs through task load, status update, diff parse, rule evaluation, prompt build, LLM call, result validation, report persistence, and final status update.
