@@ -76,12 +76,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: pending
 
-- [ ] Implement issue feedback API
+- [x] Implement issue feedback API
   - Scope: Add per-issue feedback update endpoint for useful, useless, false positive, adopted, and ignored states, with optional comment storage.
   - Acceptance: Feedback stores the latest status per issue with an optional comment and updates the issue-visible state without changing AI report content.
   - Tests: API tests for each feedback status, optional comment, invalid status, missing issue, repeated update, and report response reflecting latest feedback.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-30
 
 - [ ] Implement history filtering and dashboard metrics API
   - Scope: Support task list filters for project, risk level, status, and date range; expose lightweight counts for recent tasks, risk distribution, issue counts, useful rate, false-positive rate, and adoption rate where data exists.
