@@ -54,6 +54,7 @@ Verification:
 - `pnpm typecheck` passes.
 - `pnpm test` passes with 17 tests (4 review form tests).
 - `pnpm build` passes.
+- Browser-based end-to-end test by testing-engineer confirmed: form fields render, validation messages appear, submission creates task via POST /api/review-tasks, and navigation to report detail page succeeds. Verified 2026-05-30.
 
 ## Implement Review status polling flow
 
@@ -94,6 +95,7 @@ Verification:
 - `pnpm test` passes with 29 tests (10 report detail tests).
 - `pnpm build` passes.
 - Report tests cover: PR info, AI summary, risk level, issue stats, grouped/sorted issues, confidence badges, feedback state, code snippets, matched rules, empty report, and minimal report.
+- Browser-based end-to-end test by testing-engineer confirmed: after creating a review task with an auth-logic diff, the report page shows AI summary (purpose + modules + impact), risk level with reasons, issue list sorted high-first with type/severity/description/suggestion per issue, and high-risk issues are visually prominent. Verified 2026-05-30.
 
 Next frontend milestone:
 
@@ -141,6 +143,23 @@ Delivered scope:
 Verification:
 
 - `pnpm verify` and `pnpm test` both pass; typecheck and build clean.
+
+## Verify Create Review Task feature
+
+Status: verified by verify-engineer on 2026-05-30.
+
+Testing engineer confirmed all 10 acceptance criteria pass:
+
+- Form fields render correctly (PR title, description, diff content)
+- Required field validation works (title and diff cannot be empty)
+- Form submission creates task via POST /api/review-tasks
+- Navigation to report detail page succeeds after task completion
+- Report detail page renders with nested task, summary, risk, issue_stats, and issues sections
+- All report sections visible: PR info, AI summary, risk level with reasons, issue statistics, issue list with severity/types/confidence/locations/code snippets/suggestions
+
+Backend API contract fix (Task #2) resolved the TypeError that prevented report rendering. Frontend code required no changes.
+
+Verification: Browser-based end-to-end test by testing-engineer, 2026-05-30.
 
 Next frontend milestone:
 
