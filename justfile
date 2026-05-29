@@ -11,5 +11,11 @@ backend-worker:
 backend-worker-check:
     cd {{backend-dir}} && uv run apr-worker --check
 
+backend-migrate:
+    cd {{backend-dir}} && uv run alembic upgrade head
+
+backend-migrate-down:
+    cd {{backend-dir}} && uv run alembic downgrade base
+
 backend-test:
     cd {{backend-dir}} && uv run --extra dev pytest

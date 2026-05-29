@@ -17,6 +17,23 @@ Verification:
 - `just backend-worker-check` passes and returns worker readiness metadata.
 - `just backend-test` passes with 3 targeted tests covering health readiness and worker check mode.
 
+## Create persistence schema and migrations
+
+Status: completed by backend-engineer on 2026-05-29.
+
+Delivered scope:
+
+- SQLAlchemy database base, session factory, English enum values, and models for Review tasks, reports, issues, rules, and feedback.
+- Alembic configuration and initial migration for the persistence schema.
+- SQLite local database setting, migration commands, environment template, local ignore rules, and README command updates.
+- Persistence tests for migration up/down, every table, enum validation, and the 50k diff-content cap.
+
+Verification:
+
+- `just backend-test` passes with 8 tests.
+- `just backend-migrate && just backend-migrate-down` passes on SQLite.
+- `just backend-worker-check` passes.
+
 Next backend milestone:
 
-- Create the persistence schema and migrations for Review tasks, reports, issues, rules, and feedback.
+- Implement the Review task lifecycle API using the persisted Review task schema.

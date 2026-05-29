@@ -6,5 +6,7 @@ Copy `.env.example` to `.env` when local overrides are needed.
 just backend-api
 just backend-worker
 just backend-worker-check
+just backend-migrate
+just backend-migrate-down
 just backend-test
 ```

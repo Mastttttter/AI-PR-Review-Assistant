@@ -11,12 +11,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-29
 
-- [ ] Create persistence schema and migrations
+- [x] Create persistence schema and migrations
   - Scope: Add database models and migrations for review tasks, review reports, review issues, review rules, and issue feedback with soft delete support for tasks.
   - Acceptance: Schema stores PR metadata, diff content capped at 50k characters, demo owner field, English technical enum values, task status, report summary, risk reasons, issue details, matched rule IDs, and latest feedback status.
   - Tests: Migration up/down test on a clean database; model persistence tests for every table; enum and 50k diff-limit persistence tests.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-29
 
 - [ ] Implement Review task lifecycle API
   - Scope: Implement create, list, get detail, soft delete, and rerun endpoints for Review tasks; validate required PR title and diff content.
