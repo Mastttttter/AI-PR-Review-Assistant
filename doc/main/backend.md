@@ -160,4 +160,22 @@ Verification:
 
 Next backend milestone:
 
-- Implement the Review rule CRUD API.
+## Implement Review rule CRUD API
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- Full REST API: create, list, update, enable, disable, and soft-delete endpoints.
+- Pydantic request/response models with validation for name, description, rule type, and severity enum fields.
+- Owner-enforced access via demo owner header; deleted rules excluded from list.
+- Enable/disable as idempotent PATCH operations returning updated rule.
+
+Verification:
+
+- `uv run python -m pytest tests/` passes with 131 tests (16 rules CRUD + 115 prior).
+- CRUD tests cover: create, validation, invalid enums, disabled creation, owner-filtered list, full update, access control, enable/disable, idempotency, soft delete, and post-delete exclusion.
+
+Next backend milestone:
+
+- Implement the issue feedback API.

@@ -69,12 +69,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
 
 ## P1 rules, history, and feedback
 
-- [ ] Implement Review rule CRUD API
+- [x] Implement Review rule CRUD API
   - Scope: Add create, list, update, enable, disable, and delete endpoints for Review rules with validation for name, description, type, severity, and enabled state.
   - Acceptance: Enabled rules are available to the worker, disabled/deleted rules are excluded, and invalid rule payloads are rejected.
   - Tests: API tests for rule CRUD lifecycle, validation errors, enable/disable transitions, and worker rule loading.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-30
 
 - [ ] Implement issue feedback API
   - Scope: Add per-issue feedback update endpoint for useful, useless, false positive, adopted, and ignored states, with optional comment storage.
