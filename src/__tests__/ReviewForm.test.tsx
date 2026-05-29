@@ -14,9 +14,26 @@ function neverReport(_id: string): Promise<ReviewReport> {
 async function neverTasks(_query?: ReviewTaskListQuery): Promise<ReviewTask[]> {
   throw new Error('history should not be triggered from this test');
 }
+function neverRules(): Promise<never> {
+  throw new Error('rules should not be triggered from this test');
+}
+function neverRuleMutation(..._args: unknown[]): Promise<never> {
+  throw new Error('rule mutation should not be triggered from this test');
+}
 
 function renderForm(createReviewTask = vi.fn<(_: CreateReviewTaskRequest) => Promise<CreateReviewTaskResponse>>()) {
-  const client = { createReviewTask, getReviewTask: neverPoll, getReviewReport: neverReport, listReviewTasks: neverTasks };
+  const client = {
+    createReviewTask,
+    getReviewTask: neverPoll,
+    getReviewReport: neverReport,
+    listReviewTasks: neverTasks,
+    listReviewRules: neverRules,
+    createReviewRule: neverRuleMutation,
+    updateReviewRule: neverRuleMutation,
+    enableReviewRule: neverRuleMutation,
+    disableReviewRule: neverRuleMutation,
+    deleteReviewRule: neverRuleMutation,
+  };
   render(
     <MemoryRouter initialEntries={['/reviews/new']}>
       <App client={client} />

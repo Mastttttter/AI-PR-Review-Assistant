@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { ApiRequestError, apiClient } from './api';
-import type { ApiClient, CreateReviewTaskRequest, IssueSeverity, ReviewReport, ReviewTask, ReviewTaskListQuery, ReviewTaskStatus, RiskLevel } from './api';
-import { confidenceLevelLabels, issueSeverityLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels } from './api';
+import type { ApiClient, CreateReviewTaskRequest, IssueSeverity, ReviewReport, ReviewRule, ReviewTask, ReviewTaskListQuery, ReviewTaskStatus, RiskLevel, RuleType, UpsertReviewRuleRequest } from './api';
+import { confidenceLevelLabels, issueSeverityLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels, ruleTypeLabels } from './api';
 
 const MAX_DIFF_LENGTH = 50_000;
 
@@ -17,11 +17,12 @@ const navigationItems = [
 type ReviewTaskApi = Pick<ApiClient, 'createReviewTask'>;
 type ReportClientApi = Pick<ApiClient, 'getReviewTask' | 'getReviewReport'>;
 type HistoryClientApi = Pick<ApiClient, 'listReviewTasks'>;
+type RulesClientApi = Pick<ApiClient, 'listReviewRules' | 'createReviewRule' | 'updateReviewRule' | 'enableReviewRule' | 'disableReviewRule' | 'deleteReviewRule'>;
 
 type FormErrors = Partial<Record<keyof CreateReviewTaskRequest | 'submit', string>>;
 
 type AppProps = {
-  client?: ReviewTaskApi & ReportClientApi & HistoryClientApi;
+  client?: ReviewTaskApi & ReportClientApi & HistoryClientApi & RulesClientApi;
   pollIntervalMs?: number;
 };
 
@@ -312,8 +313,228 @@ function HistoryPage({ client }: { client: HistoryClientApi }) {
   );
 }
 
-function RulesPage() {
-  return <PageCard title="规则配置" description="配置团队基础 Review 规则，统一测试、安全、规范和文档要求。" />;
+type RuleFormErrors = Partial<Record<keyof UpsertReviewRuleRequest | 'submit', string>>;
+
+const ruleTypeOptions: RuleType[] = ['test', 'style', 'security', 'documentation', 'naming', 'module'];
+const severityOptions: IssueSeverity[] = ['low', 'medium', 'high'];
+
+function emptyRuleForm(): UpsertReviewRuleRequest {
+  return { name: '', description: '', type: 'style', severity: 'medium', enabled: true };
+}
+
+function validateRuleForm(form: UpsertReviewRuleRequest): RuleFormErrors {
+  const errors: RuleFormErrors = {};
+  if (!form.name.trim()) errors.name = '规则名称不能为空。';
+  if (!form.description.trim()) errors.description = '规则描述不能为空。';
+  return errors;
+}
+
+function RulesPage({ client }: { client: RulesClientApi }) {
+  const [rules, setRules] = useState<ReviewRule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<UpsertReviewRuleRequest>(emptyRuleForm());
+  const [formErrors, setFormErrors] = useState<RuleFormErrors>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  function loadRules() {
+    setLoading(true);
+    setError(null);
+    client.listReviewRules()
+      .then(setRules)
+      .catch((e) => setError(e instanceof ApiRequestError ? e.message : '加载规则列表失败，请稍后重试。'))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => { loadRules(); }, [client]);
+
+  function openCreateForm() {
+    setEditingId(null);
+    setForm(emptyRuleForm());
+    setFormErrors({});
+    setActionError(null);
+    setShowForm(true);
+  }
+
+  function openEditForm(rule: ReviewRule) {
+    setEditingId(rule.id);
+    setForm({ name: rule.name, description: rule.description, type: rule.type, severity: rule.severity, enabled: rule.enabled });
+    setFormErrors({});
+    setActionError(null);
+    setShowForm(true);
+  }
+
+  function cancelForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyRuleForm());
+    setFormErrors({});
+  }
+
+  async function submitForm() {
+    const validationErrors = validateRuleForm(form);
+    setFormErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      if (editingId) {
+        await client.updateReviewRule(editingId, form);
+      } else {
+        await client.createReviewRule(form);
+      }
+      setShowForm(false);
+      setEditingId(null);
+      setForm(emptyRuleForm());
+      loadRules();
+    } catch (e) {
+      setActionError(e instanceof ApiRequestError ? e.message : '保存规则失败，请稍后重试。');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function toggleEnabled(rule: ReviewRule) {
+    setActionError(null);
+    try {
+      const updated = rule.enabled
+        ? await client.disableReviewRule(rule.id)
+        : await client.enableReviewRule(rule.id);
+      setRules((current) => current.map((r) => (r.id === rule.id ? updated : r)));
+    } catch (e) {
+      setActionError(e instanceof ApiRequestError ? e.message : '更新规则状态失败。');
+    }
+  }
+
+  async function confirmDelete() {
+    if (!confirmDeleteId) return;
+    setActionError(null);
+    try {
+      await client.deleteReviewRule(confirmDeleteId);
+      setRules((current) => current.filter((r) => r.id !== confirmDeleteId));
+      setConfirmDeleteId(null);
+    } catch (e) {
+      setActionError(e instanceof ApiRequestError ? e.message : '删除规则失败。');
+    }
+  }
+
+  function updateFormField<K extends keyof UpsertReviewRuleRequest>(key: K, value: UpsertReviewRuleRequest[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+    setFormErrors((current) => ({ ...current, [key]: undefined, submit: undefined }));
+  }
+
+  return (
+    <PageCard title="规则配置" description="配置团队基础 Review 规则，统一测试、安全、规范和文档要求。">
+      <div className="rules-page">
+        <div className="rules-toolbar">
+          <button type="button" className="primary-button" onClick={openCreateForm} disabled={showForm}>新建规则</button>
+          {actionError ? <span className="rules-action-error">{actionError}</span> : null}
+        </div>
+
+        {showForm ? (
+          <div className="rule-form-card">
+            <h5 className="rule-form-title">{editingId ? '编辑规则' : '新建规则'}</h5>
+            <div className="form-grid">
+              <label className="form-field">
+                <span>规则名称 *</span>
+                <input value={form.name} onChange={(e) => updateFormField('name', e.target.value)} placeholder="例如：修改核心逻辑必须补充测试" aria-invalid={Boolean(formErrors.name)} />
+                {formErrors.name ? <strong>{formErrors.name}</strong> : null}
+              </label>
+              <label className="form-field">
+                <span>规则类型</span>
+                <select value={form.type} onChange={(e) => updateFormField('type', e.target.value as RuleType)}>
+                  {ruleTypeOptions.map((t) => <option key={t} value={t}>{ruleTypeLabels[t]}</option>)}
+                </select>
+              </label>
+              <label className="form-field">
+                <span>严重程度</span>
+                <select value={form.severity} onChange={(e) => updateFormField('severity', e.target.value as IssueSeverity)}>
+                  {severityOptions.map((s) => <option key={s} value={s}>{issueSeverityLabels[s]}</option>)}
+                </select>
+              </label>
+              <div className="form-field form-checkbox">
+                <span>启用状态</span>
+                <label className="checkbox-row">
+                  <input type="checkbox" checked={form.enabled} onChange={(e) => updateFormField('enabled', e.target.checked)} />
+                  <span>{form.enabled ? '启用' : '停用'}</span>
+                </label>
+              </div>
+            </div>
+            <label className="form-field">
+              <span>规则描述 *</span>
+              <textarea value={form.description} onChange={(e) => updateFormField('description', e.target.value)} rows={3} placeholder="说明规则的具体内容和适用场景。" aria-invalid={Boolean(formErrors.description)} />
+              {formErrors.description ? <strong>{formErrors.description}</strong> : null}
+            </label>
+            {formErrors.submit ? <strong className="form-submit-error">{formErrors.submit}</strong> : null}
+            <div className="form-actions">
+              <button type="button" className="secondary-button" onClick={cancelForm} disabled={submitting}>取消</button>
+              <button type="button" className="primary-button" onClick={submitForm} disabled={submitting}>{submitting ? '保存中' : '保存'}</button>
+            </div>
+          </div>
+        ) : null}
+
+        {loading ? <LoadingShell label="加载规则列表..." /> : null}
+        {error ? <ErrorShell message={error} /> : null}
+
+        {!loading && !error && rules.length === 0 ? (
+          <p className="empty-state">暂无规则。点击"新建规则"添加团队 Review 规则。</p>
+        ) : null}
+
+        {!loading && rules.length > 0 ? (
+          <div className="rules-table-wrap">
+            <table className="rules-table">
+              <thead>
+                <tr>
+                  <th>规则名称</th>
+                  <th>规则类型</th>
+                  <th>严重程度</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rules.map((rule) => (
+                  <tr key={rule.id} className="rule-row">
+                    <td>
+                      <div className="rule-name-cell">
+                        <strong>{rule.name}</strong>
+                        <small>{rule.description}</small>
+                      </div>
+                    </td>
+                    <td><span className="rule-type-badge">{ruleTypeLabels[rule.type]}</span></td>
+                    <td><span className={`severity-badge severity-${rule.severity}`}>{issueSeverityLabels[rule.severity]}</span></td>
+                    <td>
+                      <button type="button" className={`rule-toggle toggle-${rule.enabled ? 'on' : 'off'}`} onClick={() => toggleEnabled(rule)}>
+                        {rule.enabled ? '启用中' : '已停用'}
+                      </button>
+                    </td>
+                    <td>
+                      <div className="rule-actions">
+                        <button type="button" className="icon-button" onClick={() => openEditForm(rule)} disabled={showForm}>编辑</button>
+                        {confirmDeleteId === rule.id ? (
+                          <>
+                            <button type="button" className="icon-button danger" onClick={confirmDelete}>确认删除</button>
+                            <button type="button" className="icon-button" onClick={() => setConfirmDeleteId(null)}>取消</button>
+                          </>
+                        ) : (
+                          <button type="button" className="icon-button danger" onClick={() => setConfirmDeleteId(rule.id)} disabled={showForm}>删除</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </div>
+    </PageCard>
+  );
 }
 
 function ReportPage({ client, pollIntervalMs = 2_000 }: { client: ReportClientApi; pollIntervalMs?: number }) {
@@ -552,7 +773,7 @@ export function App({ client = apiClient, pollIntervalMs }: AppProps) {
         <Route path="/" element={<WorkbenchPage />} />
         <Route path="/reviews/new" element={<NewReviewPage client={client} />} />
         <Route path="/history" element={<HistoryPage client={client} />} />
-        <Route path="/rules" element={<RulesPage />} />
+        <Route path="/rules" element={<RulesPage client={client} />} />
         <Route path="/reviews/:taskId" element={<ReportPage client={client} pollIntervalMs={pollIntervalMs} />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
