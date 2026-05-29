@@ -4,12 +4,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
 
 ## P0 main review flow
 
-- [ ] Scaffold backend API, worker, and shared settings
+- [x] Scaffold backend API, worker, and shared settings
   - Scope: Set up FastAPI service, RQ worker entrypoint, shared configuration, environment variables, health endpoint, and local development commands.
   - Acceptance: API and RQ worker can start independently; health check reports service readiness without requiring an LLM call.
   - Tests: Health endpoint test; startup smoke test for API and RQ worker.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-29
 
 - [ ] Create persistence schema and migrations
   - Scope: Add database models and migrations for review tasks, review reports, review issues, review rules, and issue feedback with soft delete support for tasks.
