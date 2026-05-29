@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { ApiRequestError, apiClient } from './api';
-import type { ApiClient, CreateReviewTaskRequest, IssueSeverity, ReviewReport, ReviewRule, ReviewTask, ReviewTaskListQuery, ReviewTaskStatus, RiskLevel, RuleType, UpsertReviewRuleRequest } from './api';
-import { confidenceLevelLabels, issueSeverityLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels, ruleTypeLabels } from './api';
+import type { ApiClient, CreateReviewTaskRequest, FeedbackStatus, IssueSeverity, ReviewIssue, ReviewReport, ReviewRule, ReviewTask, ReviewTaskListQuery, ReviewTaskStatus, RiskLevel, RuleType, UpsertReviewRuleRequest } from './api';
+import { confidenceLevelLabels, feedbackStatusLabels, issueSeverityLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels, ruleTypeLabels } from './api';
 
 const MAX_DIFF_LENGTH = 50_000;
 
@@ -18,11 +18,12 @@ type ReviewTaskApi = Pick<ApiClient, 'createReviewTask'>;
 type ReportClientApi = Pick<ApiClient, 'getReviewTask' | 'getReviewReport'>;
 type HistoryClientApi = Pick<ApiClient, 'listReviewTasks'>;
 type RulesClientApi = Pick<ApiClient, 'listReviewRules' | 'createReviewRule' | 'updateReviewRule' | 'enableReviewRule' | 'disableReviewRule' | 'deleteReviewRule'>;
+type FeedbackClientApi = Pick<ApiClient, 'updateIssueFeedback'>;
 
 type FormErrors = Partial<Record<keyof CreateReviewTaskRequest | 'submit', string>>;
 
 type AppProps = {
-  client?: ReviewTaskApi & ReportClientApi & HistoryClientApi & RulesClientApi;
+  client?: ReviewTaskApi & ReportClientApi & HistoryClientApi & RulesClientApi & FeedbackClientApi;
   pollIntervalMs?: number;
 };
 
@@ -537,7 +538,7 @@ function RulesPage({ client }: { client: RulesClientApi }) {
   );
 }
 
-function ReportPage({ client, pollIntervalMs = 2_000 }: { client: ReportClientApi; pollIntervalMs?: number }) {
+function ReportPage({ client, pollIntervalMs = 2_000 }: { client: ReportClientApi & FeedbackClientApi; pollIntervalMs?: number }) {
   const { taskId } = useParams();
   const [task, setTask] = useState<ReviewTask | null>(null);
   const [report, setReport] = useState<ReviewReport | null>(null);
@@ -585,7 +586,7 @@ function ReportPage({ client, pollIntervalMs = 2_000 }: { client: ReportClientAp
   }, [taskId, client]);
 
   if (report) {
-    return <ReportDetailCard report={report} />;
+    return <ReportDetailCard report={report} client={client} />;
   }
 
   if (error) {
@@ -630,7 +631,76 @@ function FeedbackBadge({ status }: { status: string }) {
   return <span className="feedback-badge">{labels[status] ?? status}</span>;
 }
 
-function ReportDetailCard({ report }: { report: ReviewReport }) {
+type FeedbackOption = Exclude<FeedbackStatus, 'none'>;
+const feedbackOptions: { value: FeedbackOption; label: string }[] = [
+  { value: 'useful', label: '有用' },
+  { value: 'useless', label: '无用' },
+  { value: 'false_positive', label: '误报' },
+  { value: 'adopted', label: '已采纳' },
+  { value: 'ignored', label: '暂不处理' },
+];
+
+function FeedbackControls({
+  issueId,
+  currentStatus,
+  client,
+  onStatusChange,
+}: {
+  issueId: string;
+  currentStatus: FeedbackStatus;
+  client: FeedbackClientApi;
+  onStatusChange: (issueId: string, status: FeedbackStatus) => void;
+}) {
+  const [submittingOption, setSubmittingOption] = useState<FeedbackOption | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submitFeedback(option: FeedbackOption) {
+    setSubmittingOption(option);
+    setError(null);
+    try {
+      const response = await client.updateIssueFeedback(issueId, { feedbackStatus: option });
+      onStatusChange(issueId, response.feedbackStatus);
+    } catch (e) {
+      setError(e instanceof ApiRequestError ? e.message : '提交反馈失败');
+    } finally {
+      setSubmittingOption(null);
+    }
+  }
+
+  return (
+    <div className="feedback-controls">
+      <span className="feedback-controls-label">反馈:</span>
+      <div className="feedback-options">
+        {feedbackOptions.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`feedback-option${currentStatus === option.value ? ' active' : ''}`}
+            disabled={submittingOption !== null}
+            onClick={() => submitFeedback(option.value)}
+          >
+            {submittingOption === option.value ? '提交中...' : option.label}
+          </button>
+        ))}
+      </div>
+      {error ? <span className="feedback-error">{error}</span> : null}
+    </div>
+  );
+}
+
+function ReportDetailCard({ report, client }: { report: ReviewReport; client: FeedbackClientApi }) {
+  const [issueStatuses, setIssueStatuses] = useState<Record<string, FeedbackStatus>>(() => {
+    const initial: Record<string, FeedbackStatus> = {};
+    for (const issue of report.issues) {
+      initial[issue.id] = issue.feedbackStatus;
+    }
+    return initial;
+  });
+
+  function handleStatusChange(issueId: string, status: FeedbackStatus) {
+    setIssueStatuses((prev) => ({ ...prev, [issueId]: status }));
+  }
+
   const orderMap = { high: 0, medium: 1, low: 2 };
   const sorted = [...report.issues].sort(
     (a, b) => (orderMap[a.severity] ?? 2) - (orderMap[b.severity] ?? 2)
@@ -710,7 +780,7 @@ function ReportDetailCard({ report }: { report: ReviewReport }) {
                         <SeverityBadge severity={issue.severity} />
                         <span className="issue-type-badge">{issueTypeLabels[issue.type]}</span>
                         <span className={`confidence-badge conf-${issue.confidence}`}>{confidenceLevelLabels[issue.confidence]}</span>
-                        <FeedbackBadge status={issue.feedbackStatus} />
+                        <FeedbackBadge status={issueStatuses[issue.id] ?? issue.feedbackStatus} />
                         <strong className="issue-title">{issue.title}</strong>
                       </div>
                       <p className="issue-description">{issue.description}</p>
@@ -726,6 +796,12 @@ function ReportDetailCard({ report }: { report: ReviewReport }) {
                       {issue.matchedRuleIds.length > 0 ? (
                         <p className="issue-rules">命中规则: {issue.matchedRuleIds.join(', ')}</p>
                       ) : null}
+                      <FeedbackControls
+                        issueId={issue.id}
+                        currentStatus={issueStatuses[issue.id] ?? issue.feedbackStatus}
+                        client={client}
+                        onStatusChange={handleStatusChange}
+                      />
                     </li>
                   ))}
                 </ol>

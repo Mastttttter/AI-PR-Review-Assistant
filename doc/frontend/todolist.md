@@ -64,6 +64,7 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Tests: Feedback component tests; mocked success and failure mutation tests; manual browser test on a MockLLM sample report.
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer, verify-engineer 2026-05-30
+  - Verification: Task #7 implemented feedback submission UI with 7 new tests. All 5 feedback options (useful, useless, false_positive, adopted, ignored) render per issue. Clicking submits via updateIssueFeedback API, updates local state immediately, shows loading state during submission, and displays error message on failure while preserving previous status. 2026-05-30.
 
 - [x] Implement dashboard summary cards
   - Scope: Show create Review entry, recent Review tasks, risk statistics, and issue statistics on the home/workbench page.

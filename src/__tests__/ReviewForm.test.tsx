@@ -33,6 +33,7 @@ function renderForm(createReviewTask = vi.fn<(_: CreateReviewTaskRequest) => Pro
     enableReviewRule: neverRuleMutation,
     disableReviewRule: neverRuleMutation,
     deleteReviewRule: neverRuleMutation,
+    updateIssueFeedback: neverRuleMutation,
   };
   render(
     <MemoryRouter initialEntries={['/reviews/new']}>
