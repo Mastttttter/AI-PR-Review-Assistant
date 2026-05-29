@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { ApiRequestError, apiClient } from './api';
 import type { ApiClient, CreateReviewTaskRequest, IssueSeverity, ReviewReport, ReviewTask, ReviewTaskListQuery, ReviewTaskStatus, RiskLevel } from './api';
@@ -124,8 +124,7 @@ function NewReviewPage({ client }: { client: ReviewTaskApi }) {
     setErrors((current) => ({ ...current, [field]: undefined, submit: undefined }));
   }
 
-  async function submitReview(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submitReview() {
     const request: CreateReviewTaskRequest = {
       prTitle: form.prTitle.trim(),
       prDescription: emptyToUndefined(form.prDescription ?? ''),
@@ -154,7 +153,7 @@ function NewReviewPage({ client }: { client: ReviewTaskApi }) {
 
   return (
     <PageCard title="新建 Review" description="提交 PR 标题、描述与代码 diff 后进入 Review 生成状态。">
-      <form className="review-form" onSubmit={submitReview} noValidate>
+      <div className="review-form">
         {isSubmitting ? <LoadingShell label="正在创建 Review 任务" /> : null}
         {errors.submit ? <ErrorShell message={errors.submit} /> : null}
 
@@ -195,9 +194,9 @@ function NewReviewPage({ client }: { client: ReviewTaskApi }) {
 
         <div className="form-actions">
           <button type="button" className="secondary-button" onClick={() => navigate('/')} disabled={isSubmitting}>取消</button>
-          <button type="submit" className="primary-button" disabled={isSubmitting}>{isSubmitting ? '创建中' : '开始 Review'}</button>
+          <button type="button" className="primary-button" disabled={isSubmitting} onClick={submitReview}>{isSubmitting ? '创建中' : '开始 Review'}</button>
         </div>
-      </form>
+      </div>
     </PageCard>
   );
 }

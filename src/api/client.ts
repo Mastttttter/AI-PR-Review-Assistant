@@ -164,7 +164,7 @@ export class ApiClient {
   private async request<T>(path: string, init: { method?: string; body?: RequestBody } = {}): Promise<T> {
     const response = await this.fetcher(`${this.baseUrl}${path}`, {
       method: init.method ?? 'GET',
-      headers: init.body ? { 'Content-Type': 'application/json' } : undefined,
+      headers: { 'X-Demo-Owner': 'demo-user', ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
       body: init.body ? JSON.stringify(transformKeys(init.body, toSnakeCase)) : undefined
     });
 

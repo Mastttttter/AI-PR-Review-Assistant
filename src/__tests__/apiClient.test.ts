@@ -26,7 +26,7 @@ describe('ApiClient', () => {
     expect(result).toEqual({ taskId: 'task-001', status: 'pending' });
     expect(fetcher).toHaveBeenCalledWith('/api/review-tasks', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Demo-Owner': 'demo-user' },
       body: JSON.stringify({
         pr_title: '优化用户登录逻辑',
         pr_description: '新增 token 刷新机制',
