@@ -115,6 +115,33 @@ Verification:
 - pnpm test passes including 9 history tests.
 - pnpm build passes.
 
+## Apply MVP UI polish and sensitive-data guardrails
+
+Status: completed by frontend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- Audit confirmed zero console.log/warn/error/info calls in source files.
+- Sidebar security note states "Diff 与报告不在浏览器控制台输出".
+- All UI text uses engineering-focused language, no marketing copy.
+- High-risk issues prominently styled with colored borders and headers.
+- Code snippets in monospace with dark background.
+- Responsive layout at 820px breakpoint.
+
+## Complete frontend verification suite
+
+Status: completed by frontend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- `pnpm verify` script: typecheck + test + build in one command (47 tests).
+- API client tests cover serialization, deserialization, and error handling.
+- Test suite covers MVP value loop: review form -> polling -> report detail.
+
+Verification:
+
+- `pnpm verify` and `pnpm test` both pass; typecheck and build clean.
+
 Next frontend milestone:
 
-- Implement the Review rule configuration page with create, edit, enable/disable, and delete.
+- Implement per-issue feedback controls and dashboard summary cards.

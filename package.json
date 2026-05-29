@@ -7,6 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "test": "vitest run",
+    "verify": "tsc -b && vitest run && vite build",
     "typecheck": "tsc -b"
   },
   "dependencies": {

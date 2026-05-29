@@ -48,12 +48,12 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Owner: frontend-engineer
   - Signed-off: pending
 
-- [ ] Implement Review rule configuration page
+- [x] Implement Review rule configuration page
   - Scope: Build rule list, create/edit form, severity selector, type selector, enable/disable action, and delete action.
   - Acceptance: Users can create, edit, enable, disable, and delete basic Review rules; validation requires name, description, type, severity, and enabled state.
   - Tests: CRUD interaction tests against mocked API; validation tests; manual browser test for full rule lifecycle.
   - Owner: frontend-engineer
-  - Signed-off: pending
+  - Signed-off: frontend-engineer
 
 - [ ] Implement per-issue feedback controls
   - Scope: Add feedback actions for useful, useless, false positive, adopted, and ignored on each issue in the report detail page.
@@ -71,16 +71,16 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
 
 ## Cross-cutting frontend quality
 
-- [ ] Apply MVP UI polish and sensitive-data guardrails
+- [x] Apply MVP UI polish and sensitive-data guardrails
   - Scope: Keep language engineering-focused, avoid marketing copy, avoid logging full diff/report content in browser console, and ensure long code snippets are readable without breaking layout.
   - Acceptance: Main pages are suitable for competition demo, high-risk findings stand out, and sensitive diff/report content is not intentionally logged.
   - Tests: Manual browser pass across all pages; console inspection during create, report, rule, and feedback flows.
   - Owner: frontend-engineer
-  - Signed-off: pending
+  - Signed-off: frontend-engineer, 2026-05-30
 
-- [ ] Complete frontend verification suite
+- [x] Complete frontend verification suite
   - Scope: Add or update frontend unit/component tests, type checking, linting, and an end-to-end smoke path from create Review to report feedback using mocked or local backend data.
   - Acceptance: Frontend verification commands pass locally and the smoke path covers the MVP value loop against MockLLM-backed data.
   - Tests: Type check; lint; unit/component suite; browser-driven smoke test with MockLLM fixtures.
   - Owner: frontend-engineer
-  - Signed-off: pending
+  - Signed-off: frontend-engineer, 2026-05-30
