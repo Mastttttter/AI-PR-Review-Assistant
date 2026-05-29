@@ -230,7 +230,7 @@ All P0 and P1 features verified on 2026-05-30:
 **P1 Features (all PASS):**
 - Review Rule Configuration (PRD §7.8)
 - Historical Review Records (PRD §7.9)
-- User Feedback (PRD §7.10)
+- User Feedback (PRD §7.10) - Submission UI implemented in Task #7
 
 **Backend fixes applied:**
 - Task #1: Rule ID propagation in LLM prompt (commit 22d9027)
@@ -304,3 +304,23 @@ Key fixes:
 End-to-end flow verified: rule creation → review task → orchestrator → rule engine → MockLLM with rule context → report with matched_rule_ids populated → frontend displays "命中规则: [rule-id]".
 
 Note: matched_rule_ids displays rule UUIDs rather than rule names. This is a minor UX enhancement, not a functional bug. Rule name resolution would require additional API call or backend response enrichment.
+
+## Verify User Feedback Submission UI
+
+Status: verified by verify-engineer on 2026-05-30.
+
+Task #7: Implement per-issue feedback submission controls.
+
+Testing engineer confirmed implementation through code review:
+- FeedbackControls component with 5 segmented buttons (有用, 无用, 误报, 已采纳, 暂不处理) below each issue card
+- API integration via updateIssueFeedback with optimistic UI updates
+- Loading state ("提交中...") during submission
+- Error handling with inline error messages
+- Active button highlighting for current feedback status
+- FeedbackBadge component displays current status in issue header
+- Responsive layout with mobile support
+- 7 new component tests (54 total frontend tests pass)
+
+Browser MCP unavailable for interactive testing; implementation verified via code review. Backend API (PATCH /api/review-issues/{id}/feedback) and persistence were previously verified by testing-engineer.
+
+Branch: task-7-feedback-ui, commit f23381f, merged to main.
