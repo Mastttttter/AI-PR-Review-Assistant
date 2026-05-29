@@ -83,6 +83,24 @@ Verification:
 - `uv run python -m pytest tests/` passes with 52 tests (20 rule engine tests + 32 prior tests).
 - Rule engine tests cover: each checker type (banned, test, security, naming, docs, module), disabled rule exclusion, multiple enabled rules, unknown rule types, checker coverage completeness, and edge cases (deleted-only files, empty diffs).
 
+## Implement LLM adapter and mock provider
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- Abstract `LLMProvider` base class with `generate_review` interface for IOC.
+- `MockLLMProvider` returning canonical structured review output for tests and demo without real LLM calls.
+- `OpenAICompatibleProvider` with bearer auth, JSON mode, configurable base URL, model, and timeout.
+- Log redaction for full prompt and result content; prompt preview capped at 200 chars.
+- Factory function auto-selects MockLLM when API key is unset or mock is enabled.
+- Error hierarchy: `LLMError` base, `LLMTimeoutError`, `LLMResponseError`.
+
+Verification:
+
+- `uv run python -m pytest tests/` passes with 52 tests (20 LLM adapter tests + 32 prior tests).
+- Adapter tests cover: MockLLM output structure and idempotency, OpenAI success/error/timeout/JSON/invalid/network paths, bearer auth verification, log redaction, factory selection, and error hierarchy.
+
 Next backend milestone:
 
-- Implement the LLM adapter and mock provider for AI-driven review analysis.
+- Implement the AI Review orchestration worker that ties together the full pipeline.
