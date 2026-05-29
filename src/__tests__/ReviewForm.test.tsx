@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { App } from '../App';
-import type { CreateReviewTaskRequest, CreateReviewTaskResponse, ReviewReport, ReviewTask } from '../api';
+import type { CreateReviewTaskRequest, CreateReviewTaskResponse, ReviewReport, ReviewTask, ReviewTaskListQuery } from '../api';
 
 function neverPoll(_id: string): Promise<ReviewTask> {
   throw new Error('polling should not be triggered from this test');
@@ -11,9 +11,12 @@ function neverPoll(_id: string): Promise<ReviewTask> {
 function neverReport(_id: string): Promise<ReviewReport> {
   throw new Error('report fetch should not be triggered from this test');
 }
+async function neverTasks(_query?: ReviewTaskListQuery): Promise<ReviewTask[]> {
+  throw new Error('history should not be triggered from this test');
+}
 
 function renderForm(createReviewTask = vi.fn<(_: CreateReviewTaskRequest) => Promise<CreateReviewTaskResponse>>()) {
-  const client = { createReviewTask, getReviewTask: neverPoll, getReviewReport: neverReport };
+  const client = { createReviewTask, getReviewTask: neverPoll, getReviewReport: neverReport, listReviewTasks: neverTasks };
   render(
     <MemoryRouter initialEntries={['/reviews/new']}>
       <App client={client} />
