@@ -106,7 +106,7 @@ export class ApiClient {
 
   constructor(options: ApiClientOptions = {}) {
     this.baseUrl = options.baseUrl ?? '/api';
-    this.fetcher = options.fetcher ?? fetch;
+    this.fetcher = options.fetcher ?? fetch.bind(window);
   }
 
   async createReviewTask(request: CreateReviewTaskRequest): Promise<CreateReviewTaskResponse> {
