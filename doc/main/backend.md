@@ -34,6 +34,23 @@ Verification:
 - `just backend-migrate && just backend-migrate-down` passes on SQLite.
 - `just backend-worker-check` passes.
 
+## Implement Review task lifecycle API
+
+Status: completed by backend-engineer on 2026-05-29.
+
+Delivered scope:
+
+- Create, list, get detail, soft delete, and rerun endpoints for Review tasks.
+- Pydantic request/response models with validation: required PR title and diff, 50k diff limit, blank rejection.
+- Demo owner header for task ownership; all endpoints filter by owner and exclude soft-deleted records.
+- RQ job enqueuing on create and rerun; task state reset on rerun.
+- Response models expose PRD fields: status, risk level, issue count, created/updated timestamps.
+
+Verification:
+
+- `uv run python -m pytest tests/` passes with 17 tests (9 lifecycle API tests + 8 prior tests).
+- Lifecycle tests cover: validation errors, 50k limit, create + enqueue, list filtering, detail, soft delete exclusion, rerun reset, and deleted-task rejection.
+
 Next backend milestone:
 
-- Implement the Review task lifecycle API using the persisted Review task schema.
+- Implement the diff parser module so the worker can parse diff input for metric extraction and prompt building.

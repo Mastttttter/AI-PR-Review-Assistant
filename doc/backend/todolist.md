@@ -18,12 +18,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-29
 
-- [ ] Implement Review task lifecycle API
+- [x] Implement Review task lifecycle API
   - Scope: Implement create, list, get detail, soft delete, and rerun endpoints for Review tasks; validate required PR title and diff content.
   - Acceptance: Creating a task validates the 50k character diff limit, stores input with a simplified demo owner field, returns a task id and status, enqueues an RQ Review job, and never exposes deleted tasks as active records.
   - Tests: API tests for validation errors, diff limit, successful creation response shape, list filters, detail lookup, soft delete, and rerun behavior.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-29
 
 - [ ] Implement diff parser and change metrics
   - Scope: Parse unified diff or code snippet input into file entries, hunks, line counts, language hints, test-file detection, and sensitive keyword signals.
