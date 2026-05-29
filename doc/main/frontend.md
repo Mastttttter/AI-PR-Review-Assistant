@@ -97,4 +97,24 @@ Verification:
 
 Next frontend milestone:
 
-- Implement the history Review records page with filtering support.
+
+## Implement history Review records page
+
+Status: completed by frontend-engineer on 2026-05-29.
+
+Delivered scope:
+
+- HistoryPage component with filterable task list, loading/error/empty states.
+- Filter bar: project name, risk level select, status select, date range inputs.
+- 7-column table: PR title, project, creator, time, risk badge, issue count, status pill.
+- Clickable rows navigate to task detail; all four task statuses visually distinguishable.
+
+Verification:
+
+- pnpm typecheck passes.
+- pnpm test passes including 9 history tests.
+- pnpm build passes.
+
+Next frontend milestone:
+
+- Implement the Review rule configuration page with create, edit, enable/disable, and delete.

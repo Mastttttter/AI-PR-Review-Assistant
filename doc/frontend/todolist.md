@@ -41,7 +41,7 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
 
 ## P1 rules, history, and feedback
 
-- [ ] Implement history Review records page
+- [x] Implement history Review records page
   - Scope: Show historical tasks with title, project, creator, created time, risk level, issue count, and status; support project, risk, status, and date filters if backend endpoints are available.
   - Acceptance: Users can distinguish pending, running, completed, failed, and deleted states; users can open a task detail from the list.
   - Tests: List rendering tests; filter interaction tests with mocked query params; manual browser test on seeded task data.

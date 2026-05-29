@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { ApiRequestError, apiClient } from './api';
-import type { ApiClient, CreateReviewTaskRequest, IssueSeverity, ReviewReport, ReviewTask, ReviewTaskStatus } from './api';
+import type { ApiClient, CreateReviewTaskRequest, IssueSeverity, ReviewReport, ReviewTask, ReviewTaskListQuery, ReviewTaskStatus, RiskLevel } from './api';
 import { confidenceLevelLabels, issueSeverityLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels } from './api';
 
 const MAX_DIFF_LENGTH = 50_000;
@@ -16,11 +16,12 @@ const navigationItems = [
 
 type ReviewTaskApi = Pick<ApiClient, 'createReviewTask'>;
 type ReportClientApi = Pick<ApiClient, 'getReviewTask' | 'getReviewReport'>;
+type HistoryClientApi = Pick<ApiClient, 'listReviewTasks'>;
 
 type FormErrors = Partial<Record<keyof CreateReviewTaskRequest | 'submit', string>>;
 
 type AppProps = {
-  client?: ReviewTaskApi & ReportClientApi;
+  client?: ReviewTaskApi & ReportClientApi & HistoryClientApi;
   pollIntervalMs?: number;
 };
 
@@ -201,8 +202,115 @@ function NewReviewPage({ client }: { client: ReviewTaskApi }) {
   );
 }
 
-function HistoryPage() {
-  return <PageCard title="历史记录" description="按任务状态、风险等级和项目维度查看历史 Review 记录。" />;
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function HistoryPage({ client }: { client: HistoryClientApi }) {
+  const navigate = useNavigate();
+  const [tasks, setTasks] = useState<ReviewTask[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<ReviewTaskListQuery>({});
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(null);
+
+    client.listReviewTasks(filters).then((data) => {
+      if (active) { setTasks(data); setLoading(false); }
+    }).catch((e) => {
+      if (active) {
+        setError(e instanceof ApiRequestError ? e.message : '加载历史记录失败，请稍后重试。');
+        setLoading(false);
+      }
+    });
+
+    return () => { active = false; };
+  }, [filters, client]);
+
+  function updateFilter<K extends keyof ReviewTaskListQuery>(key: K, value: ReviewTaskListQuery[K]) {
+    setFilters((current) => ({ ...current, [key]: value || undefined }));
+  }
+
+  return (
+    <PageCard title="历史记录" description="按任务状态、风险等级和项目维度查看历史 Review 记录。">
+      <div className="history-page">
+        <div className="filter-bar">
+          <label className="filter-field">
+            <span>项目</span>
+            <input value={filters.projectName ?? ''} onChange={(e) => updateFilter('projectName', e.target.value || undefined)} placeholder="按项目筛选" />
+          </label>
+          <label className="filter-field">
+            <span>风险等级</span>
+            <select value={filters.riskLevel ?? ''} onChange={(e) => updateFilter('riskLevel', (e.target.value || undefined) as RiskLevel | undefined)}>
+              <option value="">全部</option>
+              <option value="high">高风险</option>
+              <option value="medium">中风险</option>
+              <option value="low">低风险</option>
+            </select>
+          </label>
+          <label className="filter-field">
+            <span>状态</span>
+            <select value={filters.status ?? ''} onChange={(e) => updateFilter('status', (e.target.value || undefined) as ReviewTaskStatus | undefined)}>
+              <option value="">全部</option>
+              <option value="pending">待分析</option>
+              <option value="running">分析中</option>
+              <option value="completed">已完成</option>
+              <option value="failed">分析失败</option>
+            </select>
+          </label>
+          <label className="filter-field">
+            <span>起始时间</span>
+            <input type="date" value={filters.createdFrom ?? ''} onChange={(e) => updateFilter('createdFrom', e.target.value || undefined)} />
+          </label>
+          <label className="filter-field">
+            <span>截止时间</span>
+            <input type="date" value={filters.createdTo ?? ''} onChange={(e) => updateFilter('createdTo', e.target.value || undefined)} />
+          </label>
+        </div>
+
+        {loading ? <LoadingShell label="加载历史记录..." /> : null}
+        {error ? <ErrorShell message={error} /> : null}
+
+        {!loading && !error && tasks.length === 0 ? (
+          <p className="empty-state">暂无 Review 记录。</p>
+        ) : null}
+
+        {!loading && tasks.length > 0 ? (
+          <div className="history-table-wrap">
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th>PR 标题</th>
+                  <th>所属项目</th>
+                  <th>创建人</th>
+                  <th>创建时间</th>
+                  <th>风险等级</th>
+                  <th>问题数量</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tasks.map((task) => (
+                  <tr key={task.id} className="history-row" onClick={() => navigate(`/reviews/${task.id}`)}>
+                    <td className="cell-title">{task.prTitle}</td>
+                    <td>{task.projectName || '-'}</td>
+                    <td>{task.createdBy || '-'}</td>
+                    <td className="cell-time">{formatTime(task.createdAt)}</td>
+                    <td>{task.riskLevel ? <span className={`risk-badge risk-${task.riskLevel}`}>{riskLevelLabels[task.riskLevel]}</span> : '-'}</td>
+                    <td className="cell-num">{task.issueCount}</td>
+                    <td><span className={`status-pill-task pill-${task.status}`}>{reviewTaskStatusLabels[task.status]}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </div>
+    </PageCard>
+  );
 }
 
 function RulesPage() {
@@ -444,7 +552,7 @@ export function App({ client = apiClient, pollIntervalMs }: AppProps) {
       <Routes>
         <Route path="/" element={<WorkbenchPage />} />
         <Route path="/reviews/new" element={<NewReviewPage client={client} />} />
-        <Route path="/history" element={<HistoryPage />} />
+        <Route path="/history" element={<HistoryPage client={client} />} />
         <Route path="/rules" element={<RulesPage />} />
         <Route path="/reviews/:taskId" element={<ReportPage client={client} pollIntervalMs={pollIntervalMs} />} />
         <Route path="*" element={<NotFoundPage />} />
