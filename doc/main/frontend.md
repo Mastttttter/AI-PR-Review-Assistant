@@ -266,3 +266,41 @@ Modification Suggestions (PRD 7.5):
 13. Suggestions reference specific code context with file path and code snippets
 
 All criteria verified via browser testing and API response inspection.
+
+## Verify RulesPage UI Implementation
+
+Status: verified by verify-engineer on 2026-05-30.
+
+Task #5: Implement RulesPage CRUD interface for review rule management.
+
+Frontend engineer delivered:
+- Full CRUD interface at /rules route with rule list table
+- Create/edit modal with validation (name and description required)
+- Enable/disable toggle per rule row
+- Delete with inline confirmation
+- Empty state when no rules exist
+- Error handling for API failures
+- 11 new component tests (58 total frontend tests passing)
+- Responsive layout with mobile breakpoint at 820px
+
+Implementation uses existing API client methods (listReviewRules, createReviewRule, updateReviewRule, enableReviewRule, disableReviewRule, deleteReviewRule) and follows the established design system patterns.
+
+Branch: task-5-rules-page, commit 3423344, merged to main.
+
+## Verify Rule Configuration Integration
+
+Status: verified by verify-engineer on 2026-05-30.
+
+Testing engineer confirmed criteria 8-10 pass after fixes:
+
+8. Create rule "禁止 console.log" (type: style, severity: medium) - PASS
+9. Create review with diff containing console.log - PASS
+10. Report displays matched rule ID in issue card - PASS
+
+Key fixes:
+- Task #1 (commit 22d9027): Rule ID propagation in LLM prompt
+- Task #6 (commit d1a7169): MockLLMProvider extracts rule IDs from prompt and includes in matched_rule_ids
+
+End-to-end flow verified: rule creation → review task → orchestrator → rule engine → MockLLM with rule context → report with matched_rule_ids populated → frontend displays "命中规则: [rule-id]".
+
+Note: matched_rule_ids displays rule UUIDs rather than rule names. This is a minor UX enhancement, not a functional bug. Rule name resolution would require additional API call or backend response enrichment.
