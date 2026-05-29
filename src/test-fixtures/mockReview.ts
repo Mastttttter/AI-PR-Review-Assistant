@@ -85,3 +85,66 @@ export const mockReviewReport: ReviewReport = {
   ],
   createdAt: '2026-05-29T10:03:00.000Z'
 };
+
+export const emptyReport: ReviewReport = {
+  id: 'report-empty',
+  task: {
+    ...mockReviewTask,
+    id: 'task-empty',
+    prTitle: '空 PR',
+    prDescription: null,
+    projectName: null,
+    targetBranch: null,
+    developerName: null,
+    status: 'completed',
+    riskLevel: 'low',
+    issueCount: 0,
+  },
+  summary: {
+    purpose: '仅更新注释。',
+    changedModules: [],
+    keyFiles: [],
+    businessImpact: '',
+    testOrSecurityNotes: '',
+  },
+  risk: { level: 'low', reasons: ['改动范围极小'] },
+  issueStats: { total: 0, high: 0, medium: 0, low: 0, ruleHits: 0 },
+  issues: [],
+  createdAt: '2026-05-29T10:03:00.000Z',
+};
+
+export const minimalReport: ReviewReport = {
+  id: 'report-min',
+  task: {
+    ...mockReviewTask,
+    id: 'task-min',
+    status: 'completed',
+  },
+  summary: {
+    purpose: '修复空值崩溃。',
+    changedModules: [],
+    keyFiles: [],
+    businessImpact: '',
+    testOrSecurityNotes: '',
+  },
+  risk: { level: 'medium', reasons: ['涉及核心模块'] },
+  issueStats: { total: 1, high: 0, medium: 1, low: 0, ruleHits: 0 },
+  issues: [
+    {
+      id: 'issue-min',
+      taskId: 'task-min',
+      reportId: 'report-min',
+      title: '空值检查',
+      type: 'exception',
+      severity: 'medium',
+      description: '缺少空值检查。',
+      location: {},
+      suggestion: '添加空值检查。',
+      confidence: 'low',
+      matchedRuleIds: [],
+      feedbackStatus: 'none',
+      createdAt: '2026-05-29T10:03:00.000Z',
+    },
+  ],
+  createdAt: '2026-05-29T10:03:00.000Z',
+};

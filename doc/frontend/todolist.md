@@ -32,12 +32,12 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer
 
-- [ ] Implement structured Review report detail page
+- [x] Implement structured Review report detail page
   - Scope: Show PR basics, status, AI summary, risk level with reasons, issue statistics, grouped issue list, matched rules, suggestions, confidence, and code location snippets.
   - Acceptance: High-risk issues appear before medium and low; every issue clearly shows type, severity, explanation, suggestion, confidence, and feedback state.
   - Tests: Component tests with high, medium, low, empty, and malformed-but-accepted report fixtures; manual browser review of a full sample report.
   - Owner: frontend-engineer
-  - Signed-off: pending
+  - Signed-off: frontend-engineer
 
 ## P1 rules, history, and feedback
 

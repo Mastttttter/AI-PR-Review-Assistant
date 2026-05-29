@@ -74,6 +74,27 @@ Verification:
 - `pnpm build` passes.
 - Polling tests cover: running-to-completed auto-reveal, failed context preservation, network error handling, and pending state display.
 
+## Implement structured Review report detail page
+
+Status: completed by frontend-engineer on 2026-05-29.
+
+Delivered scope:
+
+- PR info section with title, description, project, branch, developer, created time, and status pill.
+- AI summary with purpose, business impact, changed modules, key files, and test/security notes.
+- Risk level with colored per-level badge and numbered reason list.
+- 5-column issue stats grid (total, high, medium, low, rule hits) with severity-colored numbers.
+- Severity-grouped issue list (high/medium/low) with colored section headers, sorted high-first.
+- Each issue card: per-severity badge, type badge, confidence badge, feedback badge, title, description, code location+snippet block, suggestion with accent border, matched rule IDs.
+- Empty and minimal report fixtures; graceful handling of missing optional fields.
+
+Verification:
+
+- `pnpm typecheck` passes.
+- `pnpm test` passes with 29 tests (10 report detail tests).
+- `pnpm build` passes.
+- Report tests cover: PR info, AI summary, risk level, issue stats, grouped/sorted issues, confidence badges, feedback state, code snippets, matched rules, empty report, and minimal report.
+
 Next frontend milestone:
 
-- Implement the structured Review report detail page with full issue cards, confidence, and feedback controls.
+- Implement the history Review records page with filtering support.

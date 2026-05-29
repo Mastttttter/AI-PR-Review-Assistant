@@ -1,8 +1,8 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { ApiRequestError, apiClient } from './api';
-import type { ApiClient, CreateReviewTaskRequest, ReviewReport, ReviewTask, ReviewTaskStatus } from './api';
-import { issueSeverityLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels } from './api';
+import type { ApiClient, CreateReviewTaskRequest, IssueSeverity, ReviewReport, ReviewTask, ReviewTaskStatus } from './api';
+import { confidenceLevelLabels, issueSeverityLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels } from './api';
 
 const MAX_DIFF_LENGTH = 50_000;
 
@@ -290,22 +290,56 @@ function TaskContextBar({ task }: { task: ReviewTask }) {
   );
 }
 
+function SeverityBadge({ severity }: { severity: IssueSeverity }) {
+  return <span className={`issue-severity-badge badge-${severity}`}>{issueSeverityLabels[severity]}</span>;
+}
+
+function FeedbackBadge({ status }: { status: string }) {
+  if (!status || status === 'none') return null;
+  const labels: Record<string, string> = {
+    useful: '有用', useless: '无用', false_positive: '误报', adopted: '已采纳', ignored: '暂不处理'
+  };
+  return <span className="feedback-badge">{labels[status] ?? status}</span>;
+}
+
 function ReportDetailCard({ report }: { report: ReviewReport }) {
-  const sorted = [...report.issues].sort((a, b) => {
-    const order = { high: 0, medium: 1, low: 2 };
-    return (order[a.severity] ?? 2) - (order[b.severity] ?? 2);
-  });
+  const orderMap = { high: 0, medium: 1, low: 2 };
+  const sorted = [...report.issues].sort(
+    (a, b) => (orderMap[a.severity] ?? 2) - (orderMap[b.severity] ?? 2)
+  );
+
+  const groups = new Map<string, typeof report.issues>();
+  const severityOrder: IssueSeverity[] = ['high', 'medium', 'low'];
+  for (const sev of severityOrder) {
+    const items = sorted.filter((i) => i.severity === sev);
+    if (items.length > 0) groups.set(sev, items);
+  }
+
+  const task = report.task;
 
   return (
-    <PageCard title="Review 报告详情" description={`任务 ${report.task.id} 的审查结果。`}>
+    <PageCard title="Review 报告详情" description={`任务 ${task.id} 的审查结果。`}>
       <div className="report-detail">
-        <TaskContextBar task={report.task} />
+        <section className="report-section">
+          <h4 className="report-section-title">PR 基本信息</h4>
+          <dl className="pr-meta-list">
+            <div><dt>PR 标题</dt><dd>{task.prTitle}</dd></div>
+            {task.prDescription ? <div><dt>PR 描述</dt><dd>{task.prDescription}</dd></div> : null}
+            {task.projectName ? <div><dt>所属项目</dt><dd>{task.projectName}</dd></div> : null}
+            {task.targetBranch ? <div><dt>目标分支</dt><dd>{task.targetBranch}</dd></div> : null}
+            {task.developerName ? <div><dt>开发者</dt><dd>{task.developerName}</dd></div> : null}
+            <div><dt>创建时间</dt><dd>{new Date(task.createdAt).toLocaleString('zh-CN')}</dd></div>
+            <div><dt>Review 状态</dt><dd><span className={`status-pill-task pill-${task.status}`}>{reviewTaskStatusLabels[task.status]}</span></dd></div>
+          </dl>
+        </section>
 
         <section className="report-section">
           <h4 className="report-section-title">AI 摘要</h4>
-          <p>{report.summary.purpose}</p>
+          <p className="summary-purpose">{report.summary.purpose}</p>
+          {report.summary.businessImpact ? <p className="report-meta">业务影响: {report.summary.businessImpact}</p> : null}
           {report.summary.changedModules.length > 0 ? <p className="report-meta">涉及模块: {report.summary.changedModules.join(', ')}</p> : null}
           {report.summary.keyFiles.length > 0 ? <p className="report-meta">关键文件: {report.summary.keyFiles.join(', ')}</p> : null}
+          {report.summary.testOrSecurityNotes ? <p className="report-meta">安全/测试: {report.summary.testOrSecurityNotes}</p> : null}
         </section>
 
         <section className="report-section">
@@ -325,31 +359,62 @@ function ReportDetailCard({ report }: { report: ReviewReport }) {
             <div className="stat-high"><strong>{report.issueStats.high}</strong><span>高风险</span></div>
             <div className="stat-medium"><strong>{report.issueStats.medium}</strong><span>中风险</span></div>
             <div className="stat-low"><strong>{report.issueStats.low}</strong><span>低风险</span></div>
+            <div className="stat-rule"><strong>{report.issueStats.ruleHits}</strong><span>命中规则</span></div>
           </div>
         </section>
 
         <section className="report-section">
           <h4 className="report-section-title">问题列表</h4>
           {sorted.length === 0 ? <p className="report-meta">未发现问题。</p> : null}
-          <ol className="issue-list">
-            {sorted.map((issue) => (
-              <li key={issue.id} className={`issue-card severity-${issue.severity}`}>
-                <div className="issue-header">
-                  <span className="issue-severity-badge">{issueSeverityLabels[issue.severity]}</span>
-                  <span className="issue-type-badge">{issueTypeLabels[issue.type]}</span>
-                  <strong className="issue-title">{issue.title}</strong>
-                </div>
-                <p className="issue-description">{issue.description}</p>
-                {issue.location.filePath ? <p className="issue-location">位置: {issue.location.filePath}{issue.location.lineHint ? ` (${issue.location.lineHint})` : ''}</p> : null}
-                <p className="issue-suggestion">建议: {issue.suggestion}</p>
-              </li>
-            ))}
-          </ol>
+          {severityOrder.map((sev) => {
+            const items = groups.get(sev);
+            if (!items) return null;
+            return (
+              <div key={sev} className="issue-group">
+                <h5 className={`issue-group-header group-${sev}`}>
+                  <SeverityBadge severity={sev} />
+                  <span>{severityGroupLabel[sev]} ({items.length})</span>
+                </h5>
+                <ol className="issue-list">
+                  {items.map((issue) => (
+                    <li key={issue.id} className={`issue-card severity-${issue.severity}`}>
+                      <div className="issue-header">
+                        <SeverityBadge severity={issue.severity} />
+                        <span className="issue-type-badge">{issueTypeLabels[issue.type]}</span>
+                        <span className={`confidence-badge conf-${issue.confidence}`}>{confidenceLevelLabels[issue.confidence]}</span>
+                        <FeedbackBadge status={issue.feedbackStatus} />
+                        <strong className="issue-title">{issue.title}</strong>
+                      </div>
+                      <p className="issue-description">{issue.description}</p>
+                      {issue.location.filePath || issue.location.codeSnippet ? (
+                        <div className="issue-location-block">
+                          {issue.location.filePath ? (
+                            <span className="issue-location">位置: {issue.location.filePath}{issue.location.lineHint ? ` (${issue.location.lineHint})` : ''}</span>
+                          ) : null}
+                          {issue.location.codeSnippet ? <pre className="issue-code-snippet"><code>{issue.location.codeSnippet}</code></pre> : null}
+                        </div>
+                      ) : null}
+                      <p className="issue-suggestion">{issue.suggestion}</p>
+                      {issue.matchedRuleIds.length > 0 ? (
+                        <p className="issue-rules">命中规则: {issue.matchedRuleIds.join(', ')}</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            );
+          })}
         </section>
       </div>
     </PageCard>
   );
 }
+
+const severityGroupLabel: Record<IssueSeverity, string> = {
+  high: '高风险问题',
+  medium: '中风险问题',
+  low: '低风险问题',
+};
 
 function NotFoundPage() {
   return <PageCard title="页面不存在" description="当前路径没有对应页面，请通过左侧导航返回 MVP 功能入口。" />;

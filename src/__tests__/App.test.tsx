@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { App } from '../App';
 import type { ReviewReport, ReviewTask } from '../api';
-import { mockReviewReport, mockReviewTask } from '../test-fixtures/mockReview';
+import { emptyReport, minimalReport, mockReviewReport, mockReviewTask } from '../test-fixtures/mockReview';
 
 async function neverCalled(): Promise<never> {
   throw new Error('should not be called');
@@ -128,5 +128,110 @@ describe('Review status polling flow', () => {
     } as never, 0);
 
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('待分析...'));
+  });
+});
+
+function completedClient(report: ReviewReport) {
+  const getReviewTask = vi.fn(async () => ({ ...report.task, status: 'completed' as const }));
+  const getReviewReport = vi.fn(async () => report);
+  return { createReviewTask: neverCalled, getReviewTask, getReviewReport };
+}
+
+describe('Review report detail page', () => {
+  it('renders PR info section with all metadata', async () => {
+    renderAt('/reviews/task-001', completedClient(mockReviewReport) as never, 0);
+
+    await waitFor(() => expect(screen.getByText('PR 基本信息')).toBeInTheDocument());
+    expect(screen.getByText('优化用户登录逻辑')).toBeInTheDocument();
+    expect(screen.getByText('新增 token 刷新机制')).toBeInTheDocument();
+    expect(screen.getByText('user-center')).toBeInTheDocument();
+    expect(screen.getByText('main')).toBeInTheDocument();
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+  });
+
+  it('renders AI summary with all fields', async () => {
+    renderAt('/reviews/task-001', completedClient(mockReviewReport) as never, 0);
+
+    await waitFor(() => expect(screen.getByText('AI 摘要')).toBeInTheDocument());
+    expect(screen.getByText('新增登录 token 刷新流程。')).toBeInTheDocument();
+    expect(screen.getByText(/业务影响/)).toBeInTheDocument();
+    expect(screen.getByText(/认证模块/)).toBeInTheDocument();
+    expect(screen.getByText('关键文件: src/auth/AuthService.ts')).toBeInTheDocument();
+    expect(screen.getByText('安全/测试: 涉及认证逻辑，缺少异常场景测试。')).toBeInTheDocument();
+  });
+
+  it('renders risk level with reasons', async () => {
+    renderAt('/reviews/task-001', completedClient(mockReviewReport) as never, 0);
+
+    await waitFor(() => expect(screen.getByText('风险等级')).toBeInTheDocument());
+    const riskSection = screen.getByText('风险等级').closest('.report-section')!;
+    expect(riskSection.querySelector('.risk-badge.risk-high')).toHaveTextContent('高风险');
+    expect(screen.getByText('修改认证核心流程')).toBeInTheDocument();
+    expect(screen.getByText('未发现对应测试')).toBeInTheDocument();
+  });
+
+  it('shows issue stats including rule hits', async () => {
+    renderAt('/reviews/task-001', completedClient(mockReviewReport) as never, 0);
+
+    await waitFor(() => expect(screen.getByText('问题统计')).toBeInTheDocument());
+    expect(screen.getByText('总计')).toBeInTheDocument();
+    expect(screen.getByText('命中规则')).toBeInTheDocument();
+  });
+
+  it('groups and sorts issues by severity with section headers', async () => {
+    renderAt('/reviews/task-001', completedClient(mockReviewReport) as never, 0);
+
+    await waitFor(() => expect(screen.getByText('问题列表')).toBeInTheDocument());
+    expect(screen.getByText(/高风险问题/)).toBeInTheDocument();
+    expect(screen.getByText(/中风险问题/)).toBeInTheDocument();
+
+    const highSection = screen.getByText(/高风险问题/).closest('.issue-group');
+    const mediumSection = screen.getByText(/中风险问题/).closest('.issue-group');
+
+    expect(highSection!.compareDocumentPosition(mediumSection!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows confidence badges and feedback state on issues', async () => {
+    renderAt('/reviews/task-001', completedClient(mockReviewReport) as never, 0);
+
+    await waitFor(() => expect(screen.getByText('问题列表')).toBeInTheDocument());
+    expect(screen.getByText('高置信度')).toBeInTheDocument();
+    expect(screen.getByText('中置信度')).toBeInTheDocument();
+    expect(screen.getByText('有用')).toBeInTheDocument();
+  });
+
+  it('renders code location with snippet', async () => {
+    renderAt('/reviews/task-001', completedClient(mockReviewReport) as never, 0);
+
+    await waitFor(() => expect(screen.getByText('问题列表')).toBeInTheDocument());
+    expect(screen.getByText(/位置: src\/auth\/AuthService.ts.*L42-L58/)).toBeInTheDocument();
+    expect(screen.getByText('refreshToken();')).toBeInTheDocument();
+  });
+
+  it('shows matched rule IDs on issues', async () => {
+    renderAt('/reviews/task-001', completedClient(mockReviewReport) as never, 0);
+
+    await waitFor(() => expect(screen.getByText('问题列表')).toBeInTheDocument());
+    expect(screen.getByText(/命中规则.*rule-001/)).toBeInTheDocument();
+  });
+
+  it('handles empty issue list gracefully', async () => {
+    renderAt('/reviews/task-empty', completedClient(emptyReport) as never, 0);
+
+    await waitFor(() => expect(screen.getByText('问题列表')).toBeInTheDocument());
+    expect(screen.getByText('未发现问题。')).toBeInTheDocument();
+    const riskSection = screen.getByText('风险等级').closest('.report-section')!;
+    expect(riskSection.querySelector('.risk-badge.risk-low')).toHaveTextContent('低风险');
+    expect(screen.queryByText(/高风险问题/)).not.toBeInTheDocument();
+  });
+
+  it('handles minimal report without crashing', async () => {
+    renderAt('/reviews/task-min', completedClient(minimalReport) as never, 0);
+
+    await waitFor(() => expect(screen.getByText('问题列表')).toBeInTheDocument());
+    expect(screen.getByText('空值检查')).toBeInTheDocument();
+    expect(screen.getByText('添加空值检查。')).toBeInTheDocument();
+    expect(screen.getByText('低置信度')).toBeInTheDocument();
+    expect(screen.queryByText(/业务影响/)).not.toBeInTheDocument();
   });
 });
