@@ -214,3 +214,40 @@ Verification:
 Next backend milestone:
 
 - Implement baseline authentication and logging guardrails.
+
+## MVP Verification Summary
+
+Status: verified by verify-engineer on 2026-05-30.
+
+All P0 and P1 backend features confirmed working via browser-based end-to-end tests:
+
+**Backend API endpoints verified:**
+- POST /api/review-tasks: creates review task and triggers async processing
+- GET /api/review-tasks: lists tasks with filters (project, risk level, status)
+- GET /api/review-tasks/{id}: returns task details
+- GET /api/review-tasks/{id}/report: returns nested response with task, summary, risk, issue_stats, issues
+- PATCH /api/review-issues/{id}/feedback: persists user feedback
+- POST/GET/PATCH/DELETE /api/review-rules: full CRUD for rule configuration
+- GET /api/review-rules: lists rules for current owner
+
+**Backend fixes applied during verification:**
+1. Task #1 (commit 22d9027): Rule ID propagation in LLM prompt
+   - Added rule_id to pre-matched rule results sent to LLM
+   - Updated prompt instruction to use rule IDs in matched_rule_ids
+   - Fixed rule integration: created rules now appear in report's matched_rule_ids
+
+2. Task #2 (commit 9a727d2): Report API response restructure
+   - Changed from flat fields to nested structure: task, summary, risk, issue_stats
+   - Parse summary JSON string into object
+   - Nest risk_level and risk_reasons into risk object
+   - Add rule_hits count to issue_stats
+   - Nested issue location (file_path, line_hint, code_snippet)
+   - Updated tests: 165/165 passing
+
+**Integration test results:**
+- Rule configuration integration: PASS (rule ID appears in matched_rule_ids)
+- Report detail page rendering: PASS (no TypeError, all sections visible)
+- History page with filters: PASS (all filters work)
+- User feedback persistence: PASS (feedback survives page refresh)
+
+Backend is feature-complete for MVP.

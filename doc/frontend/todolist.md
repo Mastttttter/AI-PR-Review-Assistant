@@ -54,7 +54,8 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Acceptance: Users can create, edit, enable, disable, and delete basic Review rules; validation requires name, description, type, severity, and enabled state.
   - Tests: CRUD interaction tests against mocked API; validation tests; manual browser test for full rule lifecycle.
   - Owner: frontend-engineer
-  - Signed-off: frontend-engineer
+  - Signed-off: frontend-engineer, verify-engineer 2026-05-30
+  - Verification: Browser-based end-to-end test confirmed all 10 acceptance criteria pass, including rule-to-report integration (matched_rule_ids displayed as "命中规则"). Backend Task #1 resolved rule ID propagation. Frontend already displayed matched_rule_ids correctly. 2026-05-30.
 
 - [ ] Implement per-issue feedback controls
   - Scope: Add feedback actions for useful, useless, false positive, adopted, and ignored on each issue in the report detail page.

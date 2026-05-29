@@ -161,6 +161,24 @@ Backend API contract fix (Task #2) resolved the TypeError that prevented report 
 
 Verification: Browser-based end-to-end test by testing-engineer, 2026-05-30.
 
+## Verify Rule Configuration feature
+
+Status: verified by verify-engineer on 2026-05-30.
+
+Testing engineer confirmed all 10 acceptance criteria pass:
+
+- Rule CRUD operations work (create, list, edit, enable/disable, delete)
+- Form validation requires name, description, type, and severity
+- All 6 rule types available: test, forbidden content, documentation sync, security, naming, module constraints
+- **Rule-to-report integration works**: When a "forbidden content" rule matches console.log in a diff, the report shows:
+  - Issue about console.log detected
+  - Rule ID displayed in matched_rule_ids array
+  - UI shows "命中规则" indicator with rule name
+
+Backend fix (Task #1: rule ID propagation in LLM prompt) resolved the integration issue. The LLM now receives rule_id in pre-matched results and explicitly includes them in matched_rule_ids. Frontend already displayed matched_rule_ids correctly.
+
+Verification: Browser-based end-to-end test by testing-engineer, 2026-05-30.
+
 Next frontend milestone:
 
 - Implement per-issue feedback controls and dashboard summary cards.
