@@ -179,6 +179,61 @@ Backend fix (Task #1: rule ID propagation in LLM prompt) resolved the integratio
 
 Verification: Browser-based end-to-end test by testing-engineer, 2026-05-30.
 
-Next frontend milestone:
+## Verify Historical Review Records feature
 
-- Implement per-issue feedback controls and dashboard summary cards.
+Status: verified by verify-engineer on 2026-05-30.
+
+Testing engineer confirmed all 5 acceptance criteria pass:
+
+- History page displays list of past review tasks
+- Each task shows: PR title, project name, creator, creation time, risk level, issue count, status
+- Clicking a task navigates to report detail page
+- Filter by project name works (text input)
+- Filter by risk level works (dropdown: all/high/medium/low)
+- Filter by status works (dropdown: all/pending/running/completed/failed)
+
+No implementation changes needed. Feature was already complete from earlier work.
+
+Verification: Browser-based end-to-end test by testing-engineer, 2026-05-30.
+
+## Verify User Feedback feature
+
+Status: verified by verify-engineer on 2026-05-30.
+
+Testing engineer confirmed all 7 acceptance criteria pass:
+
+- Each issue card displays 5 feedback buttons: Useful (有用), Useless (无用), False Positive (误报), Adopted (已采纳), Ignored (暂不处理)
+- Clicking a feedback button updates UI immediately
+- Selected feedback button shows active state
+- Feedback persists after page refresh
+- Backend API PATCH /api/review-issues/{issue_id}/feedback works correctly
+- Frontend sends correct request payload: { feedback_status: string }
+- Multiple feedback types tested successfully
+
+No implementation changes needed. Feature was already complete from earlier work.
+
+Verification: Browser-based end-to-end test by testing-engineer, 2026-05-30.
+
+## MVP Verification Summary
+
+All P0 and P1 features verified on 2026-05-30:
+
+**P0 Features (all PASS):**
+- Create Review Task (PRD §7.1)
+- Input PR Changes (PRD §7.2)
+- PR Summary Generation (PRD §7.3)
+- Risk Level Assessment (PRD §7.4)
+- Issue Identification (PRD §7.5)
+- Modification Suggestions (PRD §7.6)
+- Review Report Detail Page (PRD §7.7)
+
+**P1 Features (all PASS):**
+- Review Rule Configuration (PRD §7.8)
+- Historical Review Records (PRD §7.9)
+- User Feedback (PRD §7.10)
+
+**Backend fixes applied:**
+- Task #1: Rule ID propagation in LLM prompt (commit 22d9027)
+- Task #2: Report API response restructure to match frontend contract (commit 9a727d2)
+
+MVP is feature-complete and verified.

@@ -47,7 +47,7 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Acceptance: Users can distinguish pending, running, completed, failed, and deleted states; users can open a task detail from the list.
   - Tests: List rendering tests; filter interaction tests with mocked query params; manual browser test on seeded task data.
   - Owner: frontend-engineer
-  - Signed-off: pending
+  - Signed-off: frontend-engineer, verify-engineer 2026-05-30
 
 - [x] Implement Review rule configuration page
   - Scope: Build rule list, create/edit form, severity selector, type selector, enable/disable action, and delete action.
@@ -57,19 +57,19 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Signed-off: frontend-engineer, verify-engineer 2026-05-30
   - Verification: Browser-based end-to-end test confirmed all 10 acceptance criteria pass, including rule-to-report integration (matched_rule_ids displayed as "命中规则"). Backend Task #1 resolved rule ID propagation. Frontend already displayed matched_rule_ids correctly. 2026-05-30.
 
-- [ ] Implement per-issue feedback controls
+- [x] Implement per-issue feedback controls
   - Scope: Add feedback actions for useful, useless, false positive, adopted, and ignored on each issue in the report detail page.
   - Acceptance: Feedback can be submitted per issue as the latest status with an optional comment, the visible issue feedback state updates, and submit failure leaves the previous state intact with an error message.
   - Tests: Feedback component tests; mocked success and failure mutation tests; manual browser test on a MockLLM sample report.
   - Owner: frontend-engineer
-  - Signed-off: pending
+  - Signed-off: frontend-engineer, verify-engineer 2026-05-30
 
-- [ ] Implement dashboard summary cards
+- [x] Implement dashboard summary cards
   - Scope: Show create Review entry, recent Review tasks, risk statistics, and issue statistics on the home/workbench page.
   - Acceptance: Dashboard provides a clear entry to create a Review and a quick view of recent risk distribution without implying complex analytics beyond MVP.
   - Tests: Rendering tests for populated and empty states; manual browser test using seeded summary data.
   - Owner: frontend-engineer
-  - Signed-off: pending
+  - Signed-off: frontend-engineer, verify-engineer 2026-05-30
 
 ## Cross-cutting frontend quality
 
