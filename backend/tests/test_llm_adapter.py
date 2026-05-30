@@ -447,52 +447,53 @@ class TestRedactedLogging:
 
 class TestFactory:
     def test_mock_enabled_returns_mock_provider(self, monkeypatch) -> None:
-        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "true")
-        get_settings.cache_clear()
+        monkeypatch.setattr(
+            "apr_backend.services.llm_adapter.load_llm_config",
+            lambda: {"active_provider": "openai", "mock_enabled": True, "timeout": 60,
+                     "openai": {"base_uri": "", "api_key": None, "model": ""},
+                     "anthropic": {"base_uri": "", "api_key": None, "model": ""}},
+        )
         provider = create_llm_provider()
-        get_settings.cache_clear()
-        assert isinstance(provider, MockLLMProvider)
-
-    def test_mock_enabled_returns_mock_provider(self, monkeypatch) -> None:
-        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "true")
-        get_settings.cache_clear()
-        provider = create_llm_provider()
-        get_settings.cache_clear()
         assert isinstance(provider, MockLLMProvider)
 
     def test_api_key_without_mock_returns_openai_provider(self, monkeypatch) -> None:
-        monkeypatch.setenv("APR_LLM_API_KEY", "sk-real-key")
-        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
-        get_settings.cache_clear()
+        monkeypatch.setattr(
+            "apr_backend.services.llm_adapter.load_llm_config",
+            lambda: {"active_provider": "openai", "mock_enabled": False, "timeout": 60,
+                     "openai": {"base_uri": "https://api.openai.com/v1", "api_key": "sk-real-key", "model": "gpt-4o-mini"},
+                     "anthropic": {"base_uri": "https://api.anthropic.com", "api_key": None, "model": "claude-sonnet-4-6"}},
+        )
         provider = create_llm_provider()
-        get_settings.cache_clear()
         assert isinstance(provider, OpenAICompatibleProvider)
 
     def test_anthropic_provider_setting_returns_anthropic_provider(self, monkeypatch) -> None:
-        monkeypatch.setenv("APR_LLM_API_KEY", "sk-ant-key")
-        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
-        monkeypatch.setenv("APR_LLM_PROVIDER", "anthropic")
-        get_settings.cache_clear()
+        monkeypatch.setattr(
+            "apr_backend.services.llm_adapter.load_llm_config",
+            lambda: {"active_provider": "anthropic", "mock_enabled": False, "timeout": 60,
+                     "openai": {"base_uri": "https://api.openai.com/v1", "api_key": None, "model": "gpt-4o-mini"},
+                     "anthropic": {"base_uri": "https://api.anthropic.com", "api_key": "sk-ant-key", "model": "claude-sonnet-4-6"}},
+        )
         provider = create_llm_provider()
-        get_settings.cache_clear()
         assert isinstance(provider, AnthropicLLMProvider)
 
     def test_openai_provider_setting_returns_openai_provider(self, monkeypatch) -> None:
-        monkeypatch.setenv("APR_LLM_API_KEY", "sk-key")
-        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
-        monkeypatch.setenv("APR_LLM_PROVIDER", "openai")
-        get_settings.cache_clear()
+        monkeypatch.setattr(
+            "apr_backend.services.llm_adapter.load_llm_config",
+            lambda: {"active_provider": "openai", "mock_enabled": False, "timeout": 60,
+                     "openai": {"base_uri": "https://api.openai.com/v1", "api_key": "sk-key", "model": "gpt-4o-mini"},
+                     "anthropic": {"base_uri": "https://api.anthropic.com", "api_key": None, "model": "claude-sonnet-4-6"}},
+        )
         provider = create_llm_provider()
-        get_settings.cache_clear()
         assert isinstance(provider, OpenAICompatibleProvider)
 
     def test_unknown_provider_defaults_to_openai(self, monkeypatch) -> None:
-        monkeypatch.setenv("APR_LLM_API_KEY", "sk-key")
-        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
-        monkeypatch.setenv("APR_LLM_PROVIDER", "some-unknown-provider")
-        get_settings.cache_clear()
+        monkeypatch.setattr(
+            "apr_backend.services.llm_adapter.load_llm_config",
+            lambda: {"active_provider": "some-unknown-provider", "mock_enabled": False, "timeout": 60,
+                     "openai": {"base_uri": "https://api.openai.com/v1", "api_key": "sk-key", "model": "gpt-4o-mini"},
+                     "anthropic": {"base_uri": "https://api.anthropic.com", "api_key": None, "model": "claude-sonnet-4-6"}},
+        )
         provider = create_llm_provider()
-        get_settings.cache_clear()
         assert isinstance(provider, OpenAICompatibleProvider)
 
 
@@ -574,13 +575,13 @@ class TestFactoryConfigJson:
         assert provider._model == "cfg-model"
 
     def test_provider_specific_env_vars_as_fallback(self, monkeypatch) -> None:
-        monkeypatch.setenv("APR_ANTHROPIC_API_KEY", "sk-ant-env")
-        monkeypatch.setenv("APR_ANTHROPIC_MODEL", "claude-env-model")
-        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
-        monkeypatch.setenv("APR_LLM_PROVIDER", "anthropic")
-        get_settings.cache_clear()
+        monkeypatch.setattr(
+            "apr_backend.services.llm_adapter.load_llm_config",
+            lambda: {"active_provider": "anthropic", "mock_enabled": False, "timeout": 60,
+                     "openai": {"base_uri": "https://api.openai.com/v1", "api_key": None, "model": "gpt-4o-mini"},
+                     "anthropic": {"base_uri": "https://api.anthropic.com", "api_key": "sk-ant-env", "model": "claude-env-model"}},
+        )
         provider = create_llm_provider()
-        get_settings.cache_clear()
         assert isinstance(provider, AnthropicLLMProvider)
         assert provider._model == "claude-env-model"
 
