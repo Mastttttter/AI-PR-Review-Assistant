@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { ApiRequestError, apiClient } from './api';
-import type { ApiClient, CreateReviewTaskRequest, DashboardResponse, FeedbackStatus, IssueSeverity, ProviderConfig, ReviewIssue, ReviewReport, ReviewRule, ReviewTask, ReviewTaskListQuery, ReviewTaskStatus, RiskLevel, RuleType, SettingsResponse, TestConnectionRequest, TestConnectionResponse, UpsertReviewRuleRequest } from './api';
+import type { ApiClient, CreateReviewTaskRequest, DashboardResponse, FeedbackStatus, FetchPrResponse, IssueSeverity, ProviderConfig, ReviewIssue, ReviewReport, ReviewRule, ReviewTask, ReviewTaskListQuery, ReviewTaskStatus, RiskLevel, RuleType, SettingsResponse, TestConnectionRequest, TestConnectionResponse, UpsertReviewRuleRequest } from './api';
 import { confidenceLevelLabels, feedbackStatusLabels, issueSeverityLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels, ruleTypeLabels } from './api';
 
 const MAX_DIFF_LENGTH = 50_000;
@@ -14,7 +14,7 @@ const navigationItems = [
   { label: '助手设置', path: '/settings' },
 ];
 
-type ReviewTaskApi = Pick<ApiClient, 'createReviewTask'>;
+type ReviewTaskApi = Pick<ApiClient, 'createReviewTask' | 'fetchPrInfo'>;
 type ReportClientApi = Pick<ApiClient, 'getReviewTask' | 'getReviewReport'>;
 type HistoryClientApi = Pick<ApiClient, 'listReviewTasks'>;
 type RulesClientApi = Pick<ApiClient, 'listReviewRules' | 'createReviewRule' | 'updateReviewRule' | 'enableReviewRule' | 'disableReviewRule' | 'deleteReviewRule'>;
@@ -149,6 +149,9 @@ function NewReviewPage({ client }: { client: ReviewTaskApi }) {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fetchUrl, setFetchUrl] = useState('');
+  const [fetching, setFetching] = useState(false);
+  const [fetchError, setFetchError] = useState('');
 
   const diffCount = form.diffContent.length;
   const diffIsOverLimit = diffCount > MAX_DIFF_LENGTH;
@@ -156,6 +159,21 @@ function NewReviewPage({ client }: { client: ReviewTaskApi }) {
   function updateField(field: keyof CreateReviewTaskRequest, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined, submit: undefined }));
+  }
+
+  async function handleFetchPr() {
+    setFetching(true);
+    setFetchError('');
+    try {
+      const result: FetchPrResponse = await client.fetchPrInfo(fetchUrl.trim());
+      updateField('prTitle', result.title);
+      updateField('prDescription', result.description);
+      updateField('diffContent', result.diffContent);
+    } catch (e) {
+      setFetchError(e instanceof ApiRequestError ? e.message : '获取 PR 信息失败，请稍后重试。');
+    } finally {
+      setFetching(false);
+    }
   }
 
   async function submitReview() {
@@ -190,6 +208,26 @@ function NewReviewPage({ client }: { client: ReviewTaskApi }) {
       <div className="review-form">
         {isSubmitting ? <LoadingShell label="正在创建 Review 任务" /> : null}
         {errors.submit ? <ErrorShell message={errors.submit} /> : null}
+
+        <div className="pr-fetch-row">
+          <label className="form-field pr-fetch-field">
+            <span>从 GitHub 获取 PR</span>
+            <input
+              value={fetchUrl}
+              onChange={(e) => { setFetchUrl(e.target.value); setFetchError(''); }}
+              placeholder="粘贴 GitHub PR URL，例如 https://github.com/owner/repo/pull/123"
+            />
+          </label>
+          <button
+            type="button"
+            className="secondary-button pr-fetch-button"
+            disabled={fetching || !fetchUrl.trim()}
+            onClick={handleFetchPr}
+          >
+            {fetching ? '获取中...' : '获取'}
+          </button>
+        </div>
+        {fetchError ? <span className="pr-fetch-error">{fetchError}</span> : null}
 
         <div className="form-grid">
           <label className="form-field">

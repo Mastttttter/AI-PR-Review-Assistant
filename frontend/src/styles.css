@@ -1015,3 +1015,24 @@ h3 { font-size: clamp(2.2rem, 5vw, 5.2rem); }
   font-size: 0.88rem;
   line-height: 1.6;
 }
+
+.pr-fetch-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.pr-fetch-field {
+  flex: 1;
+}
+
+.pr-fetch-button {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.pr-fetch-error {
+  color: #ffd3c8;
+  font-size: 0.88rem;
+  font-weight: 600;
+}

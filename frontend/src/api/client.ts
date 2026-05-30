@@ -4,6 +4,8 @@ import type {
   DashboardResponse,
   FeedbackRequest,
   FeedbackResponse,
+  FetchPrRequest,
+  FetchPrResponse,
   ProviderConfig,
   ReviewReport,
   ReviewRule,
@@ -180,6 +182,10 @@ export class ApiClient {
 
   async testSettingsConnection(request: TestConnectionRequest): Promise<TestConnectionResponse> {
     return this.request<TestConnectionResponse>('/settings/test', { method: 'POST', body: request });
+  }
+
+  async fetchPrInfo(url: string): Promise<FetchPrResponse> {
+    return this.request<FetchPrResponse>('/pr-fetch', { method: 'POST', body: { url } satisfies FetchPrRequest });
   }
 
   private async request<T>(path: string, init: { method?: string; body?: RequestBody } = {}): Promise<T> {
