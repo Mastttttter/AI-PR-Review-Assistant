@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-sonnet-4-6"
 
+    system_prompt: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

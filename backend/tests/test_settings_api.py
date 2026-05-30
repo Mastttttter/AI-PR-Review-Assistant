@@ -109,6 +109,23 @@ class TestGetSettings:
         body = response.json()
         assert body["openai"]["api_key"] is None
 
+    def test_includes_system_prompt(self, client, monkeypatch) -> None:
+        monkeypatch.setattr(
+            "apr_backend.api.settings.load_llm_config",
+            lambda: {
+                "active_provider": "openai",
+                "mock_enabled": False,
+                "timeout": 60,
+                "system_prompt": "Custom system instructions.",
+                "openai": {"base_uri": "https://api.openai.com/v1", "api_key": "sk-key", "model": "gpt-4o-mini"},
+                "anthropic": {"base_uri": "https://api.anthropic.com", "api_key": None, "model": "claude-sonnet-4-6"},
+            },
+        )
+        response = client.get("/api/settings", headers=OWNER)
+        assert response.status_code == 200
+        body = response.json()
+        assert body["system_prompt"] == "Custom system instructions."
+
 
 class TestPutSettings:
     def test_creates_config_file_with_correct_content(self, client, clean_config, tmp_path, monkeypatch) -> None:
@@ -183,6 +200,26 @@ class TestPutSettings:
         body = response.json()
         assert body["active_provider"] == "anthropic"
         assert body["mock_enabled"] is True
+
+    def test_put_persists_system_prompt(self, client, clean_config, tmp_path, monkeypatch) -> None:
+        config_dir = tmp_path / "config"
+        config_path = config_dir / "config.json"
+        monkeypatch.setattr("apr_backend.api.settings.CONFIG_PATH", config_path)
+        monkeypatch.setattr("apr_backend.api.settings._CONFIG_DIR", config_dir)
+        monkeypatch.setattr("apr_backend.core.config_loader._CONFIG_PATH", config_path)
+
+        payload = {
+            "system_prompt": "Be extra careful with security.",
+            "openai": {"base_uri": "https://openai.example.com", "api_key": "sk-openai", "model": "gpt-4"},
+            "anthropic": {"base_uri": "https://anthropic.example.com", "api_key": "sk-ant", "model": "claude-opus-4-7"},
+        }
+        client.put("/api/settings", json=payload, headers=OWNER)
+        get_settings.cache_clear()
+
+        response = client.get("/api/settings", headers=OWNER)
+        assert response.status_code == 200
+        body = response.json()
+        assert body["system_prompt"] == "Be extra careful with security."
 
 
 class TestPostTestSettings:

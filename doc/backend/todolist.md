@@ -168,3 +168,10 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Tests: 290/290 passing (3 new normalization tests).
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-30
+
+- [x] Add system_prompt field to config, settings API, and orchestrator
+  - Scope: Add system_prompt to Settings (APR_SYSTEM_PROMPT env var), config_loader, settings API (GET returns unmasked, PUT persists), and orchestrator (_build_prompt uses custom prompt when non-empty, falls back to SYSTEM_PROMPT constant).
+  - Acceptance: GET /api/settings returns system_prompt; PUT persists it; orchestrator uses custom prompt when configured, defaults when empty.
+  - Tests: 297/297 passing (7 new: 3 config_loader, 2 settings API, 2 orchestrator).
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-30

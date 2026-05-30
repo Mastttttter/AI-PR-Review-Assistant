@@ -33,6 +33,7 @@ def load_llm_config() -> dict[str, Any]:
         "active_provider": settings.llm_provider,
         "mock_enabled": settings.llm_mock_enabled,
         "timeout": settings.llm_timeout,
+        "system_prompt": settings.system_prompt,
         "openai": {
             "base_uri": settings.openai_base_uri,
             "api_key": settings.openai_api_key or legacy_api_key,
@@ -53,6 +54,8 @@ def load_llm_config() -> dict[str, Any]:
                     config["active_provider"] = file_config["active_provider"]
                 if "mock_enabled" in file_config:
                     config["mock_enabled"] = file_config["mock_enabled"]
+                if "system_prompt" in file_config:
+                    config["system_prompt"] = file_config["system_prompt"]
                 for provider in ("openai", "anthropic"):
                     if provider in file_config and isinstance(file_config[provider], dict):
                         for key in ("base_uri", "api_key", "model"):

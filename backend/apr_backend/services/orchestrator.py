@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from apr_backend.db.enums import Confidence, FeedbackStatus, IssueType, RiskLevel, Severity, TaskStatus
 from apr_backend.db.models import ReviewReport, ReviewIssue, ReviewRule, ReviewTask
 from apr_backend.db.session import SessionLocal
+from apr_backend.core.config_loader import load_llm_config
 from apr_backend.services.diff_parser import ParsedDiff, parse_diff
 from apr_backend.services.llm_adapter import LLMError, LLMProvider, LLMTimeoutError, create_llm_provider
 from apr_backend.services.rule_engine import RuleMatch, run_rule_engine
@@ -36,7 +37,11 @@ Rules for risk assessment:
 
 
 def _build_prompt(task: ReviewTask, parsed: ParsedDiff, rule_matches: list[RuleMatch], rules: list[ReviewRule]) -> str:
-    parts: list[str] = [SYSTEM_PROMPT, "", REVIEW_POLICY_PROMPT]
+    config = load_llm_config()
+    system_prompt = config.get("system_prompt", "")
+    effective_system = system_prompt.strip() if system_prompt else SYSTEM_PROMPT
+
+    parts: list[str] = [effective_system, "", REVIEW_POLICY_PROMPT]
 
     if rules:
         rules_json = [{"id": r.id, "name": r.name, "type": r.rule_type.value, "severity": r.severity.value, "description": r.description} for r in rules]
