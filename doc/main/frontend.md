@@ -352,3 +352,17 @@ Verification:
 - All four test files updated with required `getDashboardMetrics` mock.
 
 Branch: frontend-fixes-batch, commit f2e4a0d.
+
+## Reorganize frontend into frontend/ directory
+
+Status: completed by frontend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- Moved src/, index.html, package.json, pnpm-lock.yaml, tsconfig.json, vite.config.ts into dedicated frontend/ directory.
+- Added justfile frontend commands: frontend-install, frontend-dev, frontend-build, frontend-test, frontend-verify following backend-dir pattern.
+- Root directory now clean: backend/, frontend/, doc/, docker-compose.yml, justfile, .gitignore.
+- All 45 tests pass, typecheck and build clean from within frontend/.
+- Dev server confirmed serving SPA HTML.
+
+Branch: frontend-reorg
