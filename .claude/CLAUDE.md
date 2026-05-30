@@ -45,4 +45,4 @@ Iteration workflow (requirement-driven, coordinated by chief engineer):
 4. Engineer implements in worktree, self-verifies, and notifies chief engineer on completion.
 5. Chief engineer reviews and calls testing engineer to test the feature.
 6. If issues found, chief engineer sends them back to the engineer. Repeat from step 4.
-7. When feature passes, engineer updates `doc/main/` milestone docs, `doc/frontend/todolist.md` / `doc/backend/todolist.md`, and chief engineer integrates (commit, merge). Cycle repeats.
+7. When feature passes, engineer updates `doc/main/` milestone docs, `doc/frontend/todolist.md` / `doc/backend/todolist.md`. Chief engineer pushes the branch, creates a GitHub PR with proper title and description (feature description, implementation approach, test method), then merges. Cycle repeats.
