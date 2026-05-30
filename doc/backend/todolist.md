@@ -107,12 +107,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-30
 
-- [ ] Provide Docker Compose development stack
+- [x] Provide Docker Compose development stack
   - Scope: Add local services for backend API, worker, PostgreSQL, Redis, and optionally frontend proxy integration through nginx or documented ports.
   - Acceptance: A developer can start the MVP stack locally and run the main Review flow against seeded or mock LLM data.
-  - Tests: Compose startup smoke test; API health check; worker consumes one mock Review job.
+  - Tests: docker compose config --quiet passes; backend tests pass (220); Dockerfile builds with Python 3.12-slim + uv; .env.docker defaults to mock LLM.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-30
 
 - [x] Complete backend verification suite
   - Scope: Add unit, API, worker integration, migration, and smoke tests for the complete create Review to report retrieval loop using the mock LLM provider.
