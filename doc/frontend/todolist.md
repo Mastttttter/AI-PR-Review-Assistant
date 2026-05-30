@@ -88,3 +88,33 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Tests: Type check; lint; unit/component suite; browser-driven smoke test with MockLLM fixtures.
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer, 2026-05-30
+
+## Bug fixes (2026-05-30)
+
+- [x] Fix navigation dead link for /reviews/demo-report
+  - Scope: Remove invalid "报告详情" nav item from navigationItems array pointing to non-existent UUID; update shell navigation test.
+  - Acceptance: No dead nav links; report detail only reachable via history row clicks.
+  - Tests: Updated App.test.tsx navigation test.
+  - Owner: frontend-engineer
+  - Signed-off: frontend-engineer, verify-engineer 2026-05-30
+
+- [x] Implement live dashboard metrics on WorkbenchPage
+  - Scope: Add DashboardResponse type, getDashboardMetrics() API method, update WorkbenchPage to fetch live data with loading/error states.
+  - Acceptance: Dashboard shows real metrics from GET /api/metrics/dashboard instead of hardcoded numbers.
+  - Tests: Added getDashboardMetrics mock to all test files; 45 tests pass.
+  - Owner: frontend-engineer
+  - Signed-off: frontend-engineer, verify-engineer 2026-05-30
+
+- [x] Add "新建 Review" CTA button to WorkbenchPage
+  - Scope: Add prominent primary button on WorkbenchPage navigating to /reviews/new per PRD 8.1.
+  - Acceptance: Users can create a new review directly from the workbench landing page.
+  - Tests: Rendered via WorkbenchPage component; navigates to /reviews/new route.
+  - Owner: frontend-engineer
+  - Signed-off: frontend-engineer, verify-engineer 2026-05-30
+
+- [x] Remove duplicate HistoryPage test suite
+  - Scope: Remove duplicate describe('History records page', ...) block from App.test.tsx.
+  - Acceptance: No duplicate test definitions or function re-declarations.
+  - Tests: 45 tests pass after removing 8 duplicate tests.
+  - Owner: frontend-engineer
+  - Signed-off: frontend-engineer, verify-engineer 2026-05-30
