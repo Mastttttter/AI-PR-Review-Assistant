@@ -352,6 +352,8 @@ describe('Settings page', () => {
   const mockSettings: SettingsResponse = {
     openai: { baseUri: 'https://api.openai.com/v1', apiKey: '***-729f', model: 'gpt-4' },
     anthropic: { baseUri: 'https://api.anthropic.com', apiKey: '***-83ab', model: 'claude-3-opus' },
+    activeProvider: 'openai',
+    mockEnabled: true,
   };
 
   function settingsClient(overrides: Partial<{
@@ -380,7 +382,7 @@ describe('Settings page', () => {
 
   it('renders both provider sections with fields', async () => {
     renderAt('/settings', settingsClient());
-    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
     expect(screen.getByText('Anthropic')).toBeInTheDocument();
     expect(screen.getAllByText('Base URI').length).toBe(2);
     expect(screen.getAllByText('API Key').length).toBe(2);
@@ -391,7 +393,7 @@ describe('Settings page', () => {
 
   it('masks API keys on load showing last 4 chars', async () => {
     renderAt('/settings', settingsClient());
-    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
     const inputs = screen.getAllByPlaceholderText('sk-...');
     expect(inputs.length).toBe(2);
     expect((inputs[0] as HTMLInputElement).value).toBe('****729f');
@@ -400,7 +402,7 @@ describe('Settings page', () => {
 
   it('reveals API key on focus', async () => {
     renderAt('/settings', settingsClient());
-    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
     const inputs = screen.getAllByPlaceholderText('sk-...');
     (inputs[0] as HTMLInputElement).focus();
     await waitFor(() => expect((inputs[0] as HTMLInputElement).value).toBe('***-729f'));
@@ -415,12 +417,14 @@ describe('Settings page', () => {
   it('saves settings with masked keys cleared to empty', async () => {
     const updateSettings = vi.fn(async (req: SettingsResponse) => req);
     renderAt('/settings', settingsClient({ updateSettings }));
-    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
 
     await userEvent.click(screen.getByText('保存配置'));
     await waitFor(() => expect(updateSettings).toHaveBeenCalledWith({
       openai: { baseUri: 'https://api.openai.com/v1', apiKey: '', model: 'gpt-4' },
       anthropic: { baseUri: 'https://api.anthropic.com', apiKey: '', model: 'claude-3-opus' },
+      activeProvider: 'openai',
+      mockEnabled: true,
     }));
     expect(screen.getByText('已保存')).toBeInTheDocument();
   });
@@ -428,7 +432,7 @@ describe('Settings page', () => {
   it('shows save error on failure', async () => {
     const updateSettings = vi.fn(async () => { throw new ApiRequestError('保存失败', 500); });
     renderAt('/settings', settingsClient({ updateSettings }));
-    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
 
     await userEvent.click(screen.getByText('保存配置'));
     await waitFor(() => expect(screen.getByText('保存失败')).toBeInTheDocument());
@@ -436,8 +440,9 @@ describe('Settings page', () => {
 
   it('tests connection with masked key omits apiKey', async () => {
     const testSettingsConnection = vi.fn(async () => ({ success: true, message: '连接成功' }));
-    renderAt('/settings', settingsClient({ testSettingsConnection }));
-    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+    const realSettings = { ...mockSettings, mockEnabled: false };
+    renderAt('/settings', settingsClient({ getSettings: async () => realSettings, testSettingsConnection }));
+    await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
 
     const buttons = screen.getAllByText('测试连接');
     await userEvent.click(buttons[0]);
@@ -451,8 +456,9 @@ describe('Settings page', () => {
 
   it('tests connection with user-typed key includes apiKey', async () => {
     const testSettingsConnection = vi.fn(async () => ({ success: true, message: '连接成功' }));
-    renderAt('/settings', settingsClient({ testSettingsConnection }));
-    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+    const realSettings = { ...mockSettings, mockEnabled: false };
+    renderAt('/settings', settingsClient({ getSettings: async () => realSettings, testSettingsConnection }));
+    await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
 
     const inputs = screen.getAllByPlaceholderText('sk-...');
     (inputs[0] as HTMLInputElement).focus();
@@ -470,12 +476,40 @@ describe('Settings page', () => {
 
   it('tests connection and shows failure', async () => {
     const testSettingsConnection = vi.fn(async () => { throw new Error('Connection refused'); });
-    renderAt('/settings', settingsClient({ testSettingsConnection }));
-    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+    const realSettings = { ...mockSettings, mockEnabled: false };
+    renderAt('/settings', settingsClient({ getSettings: async () => realSettings, testSettingsConnection }));
+    await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
 
     const buttons = screen.getAllByText('测试连接');
     await userEvent.click(buttons[0]);
     await waitFor(() => expect(screen.getByText(/连接失败/)).toBeInTheDocument());
+  });
+
+  it('renders mode toggle with Mock and Real API options', async () => {
+    renderAt('/settings', settingsClient());
+    await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
+    expect(screen.getByText('运行模式')).toBeInTheDocument();
+    expect(screen.getByText('Mock 模式')).toBeInTheDocument();
+    expect(screen.getByText('真实 API')).toBeInTheDocument();
+  });
+
+  it('shows provider selector only in Real API mode', async () => {
+    const realSettings = { ...mockSettings, mockEnabled: false };
+    renderAt('/settings', settingsClient({ getSettings: async () => realSettings }));
+    await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
+    expect(screen.getByText('当前提供商')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByText('Mock 模式'));
+    expect(screen.queryByText('当前提供商')).not.toBeInTheDocument();
+  });
+
+  it('disables test connection buttons in Mock mode', async () => {
+    renderAt('/settings', settingsClient());
+    await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
+    const buttons = screen.getAllByText('测试连接');
+    expect((buttons[0] as HTMLButtonElement).disabled).toBe(true);
+    expect((buttons[1] as HTMLButtonElement).disabled).toBe(true);
+    expect((buttons[0] as HTMLButtonElement).title).toBe('Mock 模式下不可测试连接');
   });
 });
 

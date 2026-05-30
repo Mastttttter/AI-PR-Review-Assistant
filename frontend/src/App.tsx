@@ -878,13 +878,20 @@ function SettingsPage({ client }: { client: SettingsClientApi }) {
   const [revealOpenaiKey, setRevealOpenaiKey] = useState(false);
   const [revealAnthropicKey, setRevealAnthropicKey] = useState(false);
 
+  const [mockEnabled, setMockEnabled] = useState(true);
+  const [activeProvider, setActiveProvider] = useState('openai');
+
   useEffect(() => {
     let active = true;
     setLoading(true);
     setLoadError(null);
     client.getSettings()
       .then((data) => {
-        if (active) { setOpenai(data.openai); setAnthropic(data.anthropic); setLoading(false); }
+        if (active) {
+          setOpenai(data.openai); setAnthropic(data.anthropic);
+          setMockEnabled(data.mockEnabled); setActiveProvider(data.activeProvider);
+          setLoading(false);
+        }
       })
       .catch((e) => {
         if (active) {
@@ -902,6 +909,8 @@ function SettingsPage({ client }: { client: SettingsClientApi }) {
     const safePayload: SettingsResponse = {
       openai: { ...openai, apiKey: isMasked(openai.apiKey) ? '' : openai.apiKey },
       anthropic: { ...anthropic, apiKey: isMasked(anthropic.apiKey) ? '' : anthropic.apiKey },
+      activeProvider,
+      mockEnabled,
     };
     try {
       await client.updateSettings(safePayload);
@@ -1007,7 +1016,13 @@ function SettingsPage({ client }: { client: SettingsClientApi }) {
           </label>
         </div>
         <div className="settings-provider-actions">
-          <button type="button" className="secondary-button" disabled={testing} onClick={() => handleTest(providerKey, config)}>
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={testing || mockEnabled}
+            title={mockEnabled ? 'Mock 模式下不可测试连接' : undefined}
+            onClick={() => handleTest(providerKey, config)}
+          >
             {testing ? '测试中...' : '测试连接'}
           </button>
           {testResult ? (
@@ -1028,6 +1043,49 @@ function SettingsPage({ client }: { client: SettingsClientApi }) {
 
         {!loading && !loadError ? (
           <>
+            <section className="settings-toggles">
+              <div className="toggle-group">
+                <span className="toggle-group-label">运行模式</span>
+                <div className="toggle-buttons">
+                  <button
+                    type="button"
+                    className={`toggle-button ${mockEnabled ? 'toggle-active' : ''}`}
+                    onClick={() => setMockEnabled(true)}
+                  >
+                    Mock 模式
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-button ${!mockEnabled ? 'toggle-active' : ''}`}
+                    onClick={() => setMockEnabled(false)}
+                  >
+                    真实 API
+                  </button>
+                </div>
+              </div>
+              {!mockEnabled ? (
+                <div className="toggle-group">
+                  <span className="toggle-group-label">当前提供商</span>
+                  <div className="toggle-buttons">
+                    <button
+                      type="button"
+                      className={`toggle-button ${activeProvider === 'openai' ? 'toggle-active' : ''}`}
+                      onClick={() => setActiveProvider('openai')}
+                    >
+                      OpenAI
+                    </button>
+                    <button
+                      type="button"
+                      className={`toggle-button ${activeProvider === 'anthropic' ? 'toggle-active' : ''}`}
+                      onClick={() => setActiveProvider('anthropic')}
+                    >
+                      Anthropic
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
             {renderProviderSection('OpenAI', 'openai', openai, testingOpenai, testOpenaiResult, revealOpenaiKey, setRevealOpenaiKey)}
             {renderProviderSection('Anthropic', 'anthropic', anthropic, testingAnthropic, testAnthropicResult, revealAnthropicKey, setRevealAnthropicKey)}
 

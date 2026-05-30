@@ -147,6 +147,8 @@ export interface ProviderConfig {
 export interface SettingsResponse {
   openai: ProviderConfig;
   anthropic: ProviderConfig;
+  activeProvider: string;
+  mockEnabled: boolean;
 }
 
 export interface TestConnectionRequest {
