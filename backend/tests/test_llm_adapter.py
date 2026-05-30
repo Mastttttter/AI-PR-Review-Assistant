@@ -261,9 +261,8 @@ class TestFactory:
         get_settings.cache_clear()
         assert isinstance(provider, MockLLMProvider)
 
-    def test_no_api_key_returns_mock_provider(self, monkeypatch) -> None:
-        monkeypatch.delenv("APR_LLM_API_KEY", raising=False)
-        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
+    def test_mock_enabled_returns_mock_provider(self, monkeypatch) -> None:
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "true")
         get_settings.cache_clear()
         provider = create_llm_provider()
         get_settings.cache_clear()
