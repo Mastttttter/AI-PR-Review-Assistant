@@ -218,6 +218,14 @@ class ReportResponse(BaseModel):
 _SEVERITY_ORDER: dict[str, int] = {"high": 0, "medium": 1, "low": 2}
 
 
+def _normalize_list(value: object) -> list[str]:
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str) and value:
+        return [value]
+    return []
+
+
 def _parse_summary(raw: str | None) -> ReportSummaryResponse | None:
     if not raw:
         return None
@@ -229,8 +237,8 @@ def _parse_summary(raw: str | None) -> ReportSummaryResponse | None:
         return ReportSummaryResponse(purpose=raw)
     return ReportSummaryResponse(
         purpose=data.get("purpose", ""),
-        changed_modules=data.get("changed_modules", []),
-        key_files=data.get("key_files", []),
+        changed_modules=_normalize_list(data.get("changed_modules", [])),
+        key_files=_normalize_list(data.get("key_files", [])),
         business_impact=data.get("business_impact", ""),
         test_or_security_notes=data.get("test_or_security_notes", ""),
     )

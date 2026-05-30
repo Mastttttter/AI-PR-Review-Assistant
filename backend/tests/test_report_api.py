@@ -309,3 +309,80 @@ class TestEmptyIssues:
         assert body["issues"] == []
         assert body["risk"]["level"] == "low"
         assert body["issue_stats"]["rule_hits"] == 0
+
+
+class TestSummaryListNormalization:
+    def test_string_changed_modules_normalized_to_list(self, client, session_factory) -> None:
+        with session_factory() as session:
+            task = ReviewTask(
+                pr_title="Normalize", demo_owner="owner-a", diff_content="diff",
+                status=TaskStatus.completed, risk_level=RiskLevel.low, issue_count=0,
+            )
+            session.add(task)
+            session.flush()
+            summary = json.dumps({
+                "purpose": "Fix auth",
+                "changed_modules": "auth",
+                "key_files": ["src/auth.py"],
+            })
+            report = ReviewReport(
+                task_id=task.id, summary=summary, risk_level=RiskLevel.low, risk_reasons=[],
+                issue_stats={"total": 0, "high": 0, "medium": 0, "low": 0},
+            )
+            session.add(report)
+            session.commit()
+            tid = task.id
+
+        response = client.get(f"/api/review-tasks/{tid}/report", headers=OWNER)
+        assert response.status_code == 200
+        body = response.json()
+        assert body["summary"]["changed_modules"] == ["auth"]
+
+    def test_string_key_files_normalized_to_list(self, client, session_factory) -> None:
+        with session_factory() as session:
+            task = ReviewTask(
+                pr_title="Normalize", demo_owner="owner-a", diff_content="diff",
+                status=TaskStatus.completed, risk_level=RiskLevel.low, issue_count=0,
+            )
+            session.add(task)
+            session.flush()
+            summary = json.dumps({
+                "purpose": "Fix auth",
+                "changed_modules": ["auth"],
+                "key_files": "src/auth.py",
+            })
+            report = ReviewReport(
+                task_id=task.id, summary=summary, risk_level=RiskLevel.low, risk_reasons=[],
+                issue_stats={"total": 0, "high": 0, "medium": 0, "low": 0},
+            )
+            session.add(report)
+            session.commit()
+            tid = task.id
+
+        response = client.get(f"/api/review-tasks/{tid}/report", headers=OWNER)
+        assert response.status_code == 200
+        body = response.json()
+        assert body["summary"]["key_files"] == ["src/auth.py"]
+
+    def test_null_fields_default_to_empty_list(self, client, session_factory) -> None:
+        with session_factory() as session:
+            task = ReviewTask(
+                pr_title="Empty", demo_owner="owner-a", diff_content="diff",
+                status=TaskStatus.completed, risk_level=RiskLevel.low, issue_count=0,
+            )
+            session.add(task)
+            session.flush()
+            summary = json.dumps({"purpose": "Simple change"})
+            report = ReviewReport(
+                task_id=task.id, summary=summary, risk_level=RiskLevel.low, risk_reasons=[],
+                issue_stats={"total": 0, "high": 0, "medium": 0, "low": 0},
+            )
+            session.add(report)
+            session.commit()
+            tid = task.id
+
+        response = client.get(f"/api/review-tasks/{tid}/report", headers=OWNER)
+        assert response.status_code == 200
+        body = response.json()
+        assert body["summary"]["changed_modules"] == []
+        assert body["summary"]["key_files"] == []
