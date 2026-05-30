@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./apr_backend.db"
     review_queue_name: str = "review"
 
+    api_key: str | None = Field(default=None)
     llm_api_key: SecretStr | None = Field(default=None)
     llm_base_url: str = "https://api.openai.com/v1"
     llm_model: str = "gpt-4o-mini"

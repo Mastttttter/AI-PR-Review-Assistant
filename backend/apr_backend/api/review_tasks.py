@@ -24,6 +24,7 @@ class ReviewTaskCreate(BaseModel):
     project_name: str | None = Field(default=None, max_length=255)
     target_branch: str | None = Field(default=None, max_length=255)
     developer_name: str | None = Field(default=None, max_length=255)
+    owner_name: str | None = Field(default=None, max_length=255)
     diff_content: str = Field(min_length=1, max_length=50_000)
 
     @field_validator("pr_title", "diff_content")
@@ -74,6 +75,8 @@ class ReviewTaskListItem(BaseModel):
 
 @router.post("", response_model=ReviewTaskCreateResponse, status_code=status.HTTP_201_CREATED)
 def create_review_task(payload: ReviewTaskCreate, demo_owner: DemoOwnerHeader, db: DbSession) -> ReviewTaskCreateResponse:
+    if payload.owner_name and payload.owner_name != demo_owner:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="owner_name does not match X-Demo-Owner header")
     task = ReviewTask(
         pr_title=payload.pr_title.strip(),
         pr_description=payload.pr_description,

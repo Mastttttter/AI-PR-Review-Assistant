@@ -93,12 +93,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
 
 ## Cross-cutting backend quality
 
-- [ ] Add baseline authentication and access checks
+- [x] Add baseline authentication and access checks
   - Scope: Implement a simplified demo owner field suitable for MVP so reports are not globally public; ensure report, task, rule, and feedback endpoints enforce owner matching.
   - Acceptance: Requests without the expected demo owner cannot read submitted diff content or reports; no full authentication or enterprise permission system is introduced.
   - Tests: API ownership tests for own records, other-owner records, missing owner, and deleted records.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-30
 
 - [x] Add sensitive-data logging and storage guardrails
   - Scope: Prevent full diff/report content from application logs, keep LLM API keys in server environment only, and document which sensitive fields are stored.
