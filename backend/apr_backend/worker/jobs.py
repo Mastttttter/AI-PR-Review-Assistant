@@ -1,7 +1,9 @@
 import logging
 
+from apr_backend.core.logging_config import configure_app_logging
 from apr_backend.services.orchestrator import run_review_orchestrator
 
+configure_app_logging()
 logger = logging.getLogger(__name__)
 
 

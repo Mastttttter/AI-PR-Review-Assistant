@@ -9,3 +9,6 @@
 04:50 — Updated doc/backend/todolist.md and doc/main/backend.md; notified verify-engineer branch ready for merge
 04:58 — Team lead instructed progress checkpoint convention; acknowledged
 
+04:58 — Received task #10: Add sensitive-data logging and storage guardrails
+05:00 — Audited all logging: llm_adapter has 200-char truncation, logger.exception calls only log task_id (safe), prompt preview starts at SYSTEM_PROMPT (safe), need logging filter + field docs + tests
+05:05 — Implemented: SensitiveDataFilter, configure_app_logging, wired into main.py + jobs.py, documented sensitive fields in models.py, 17 new tests; 190/190 pass

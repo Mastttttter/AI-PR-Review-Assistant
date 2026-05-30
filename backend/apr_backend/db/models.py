@@ -25,6 +25,7 @@ class ReviewTask(UuidPrimaryKeyMixin, TimestampMixin, Base):
     target_branch: Mapped[str | None] = mapped_column(String(255))
     developer_name: Mapped[str | None] = mapped_column(String(255))
     demo_owner: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    # SENSITIVE: stores the full PR diff submitted by the user (capped at 50k chars)
     diff_content: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[TaskStatus] = mapped_column(enum_column(TaskStatus, "task_status"), nullable=False, default=TaskStatus.pending)
     risk_level: Mapped[RiskLevel | None] = mapped_column(enum_column(RiskLevel, "risk_level"))
@@ -41,10 +42,12 @@ class ReviewReport(UuidPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "review_reports"
 
     task_id: Mapped[str] = mapped_column(ForeignKey("review_tasks.id"), nullable=False, unique=True, index=True)
+    # SENSITIVE: contains AI-generated PR summary derived from submitted code
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     risk_level: Mapped[RiskLevel] = mapped_column(enum_column(RiskLevel, "report_risk_level"), nullable=False)
     risk_reasons: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     issue_stats: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    # SENSITIVE: full structured AI output; stored for debugging, never exposed in logs
     raw_ai_result: Mapped[dict[str, Any] | None] = mapped_column(JSON)
 
     task: Mapped[ReviewTask] = relationship(back_populates="report")

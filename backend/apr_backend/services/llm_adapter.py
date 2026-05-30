@@ -29,9 +29,9 @@ class LLMResponseError(LLMError):
 
 
 def _redact_for_log(text: str, max_length: int = REVIEW_PROMPT_PREVIEW_LENGTH) -> str:
-    if len(text) <= max_length:
-        return text
-    return f"{text[:max_length]}... [truncated, total length={len(text)}]"
+    result = text[:max_length] if len(text) > max_length else text
+    suffix = f"... [truncated, total length={len(text)}]" if len(text) > max_length else ""
+    return result + suffix
 
 
 class LLMProvider(ABC):

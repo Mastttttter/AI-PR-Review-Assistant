@@ -100,12 +100,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: pending
 
-- [ ] Add sensitive-data logging and storage guardrails
+- [x] Add sensitive-data logging and storage guardrails
   - Scope: Prevent full diff/report content from application logs, keep LLM API keys in server environment only, and document which sensitive fields are stored.
   - Acceptance: Normal request, worker, and error logs do not print full submitted code or full AI report content.
   - Tests: Logging tests or manual log inspection for create task, worker success, worker failure, and report retrieval paths.
   - Owner: backend-engineer
-  - Signed-off: pending
+  - Signed-off: backend-engineer, 2026-05-30
 
 - [ ] Provide Docker Compose development stack
   - Scope: Add local services for backend API, worker, PostgreSQL, Redis, and optionally frontend proxy integration through nginx or documented ports.
