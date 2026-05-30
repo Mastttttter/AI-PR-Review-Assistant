@@ -121,6 +121,13 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-30
 
+- [x] Implement Anthropic-compatible LLM provider
+  - Scope: Add AnthropicLLMProvider using Anthropic Messages API format (x-api-key header, system top-level, content blocks), selectable via APR_LLM_PROVIDER env var, quota exhaustion error handling (HTTP 429).
+  - Acceptance: Provider factory selects Anthropic adapter when APR_LLM_PROVIDER=anthropic; proper error types for timeout, API errors, and quota exhaustion.
+  - Tests: Unit tests for successful call, auth header format, request body structure, timeout, HTTP errors, quota exhaustion, JSON parse errors, network errors, content block handling, factory selection.
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-30
+
 ## Verification fixes
 
 - [x] Fix .env variable naming for real LLM

@@ -257,12 +257,12 @@ All P0 and P1 backend features confirmed working via browser-based end-to-end te
    - Adjusted test for mock_enabled path since .env now always provides the API key
    - 173/173 tests passing; real LLM provider loads when APR_LLM_MOCK_ENABLED=false
 
-4. Task #13 (pending merge): baseline authentication and access checks
-   - Added `APR_API_KEY` setting and `APIKeyMiddleware` validating `X-API-Key` header on all non-excluded paths
-   - Health, docs, and OpenAPI endpoints excluded from auth check
-   - When `api_key` is not configured, all requests allowed (backward compatible dev mode)
-   - Added `owner_name` field to `ReviewTaskCreate` with validation against `X-Demo-Owner` header
-   - 242/242 tests passing (22 new auth + ownership tests)
+4. Task #14 (pending merge): Anthropic-compatible LLM provider
+   - Added `AnthropicLLMProvider` using Anthropic Messages API format
+   - Uses `x-api-key` header, `anthropic-version: 2023-06-01`, top-level `system`, content blocks response
+   - Added `LLMQuotaExhaustedError` for HTTP 429 responses
+   - Added `APR_LLM_PROVIDER` setting (default "openai", set to "anthropic" for Aliyun endpoint)
+   - 237/237 tests passing (17 new Anthropic provider + factory tests)
 
 Backend is feature-complete for MVP.
 

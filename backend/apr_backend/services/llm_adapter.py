@@ -28,6 +28,10 @@ class LLMResponseError(LLMError):
     pass
 
 
+class LLMQuotaExhaustedError(LLMError):
+    pass
+
+
 def _redact_for_log(text: str, max_length: int = REVIEW_PROMPT_PREVIEW_LENGTH) -> str:
     result = text[:max_length] if len(text) > max_length else text
     suffix = f"... [truncated, total length={len(text)}]" if len(text) > max_length else ""
@@ -148,14 +152,88 @@ class OpenAICompatibleProvider(LLMProvider):
         return result
 
 
+class AnthropicLLMProvider(LLMProvider):
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str = "https://api.anthropic.com",
+        model: str = "claude-sonnet-4-6",
+        timeout: int = 60,
+    ) -> None:
+        self._api_key = api_key
+        self._base_url = base_url.rstrip("/")
+        self._model = model
+        self._timeout = timeout
+
+    def generate_review(self, prompt: str) -> dict[str, Any]:
+        logger.info("Anthropic LLM call: model=%s prompt_length=%d preview=%s", self._model, len(prompt), _redact_for_log(prompt))
+        url = f"{self._base_url}/v1/messages"
+
+        try:
+            response = httpx.post(
+                url,
+                json={
+                    "model": self._model,
+                    "max_tokens": 4096,
+                    "system": "You are an AI PR review assistant. Output valid JSON only.",
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+                headers={
+                    "x-api-key": self._api_key,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                },
+                timeout=httpx.Timeout(self._timeout),
+            )
+            response.raise_for_status()
+        except httpx.TimeoutException:
+            logger.error("Anthropic LLM call timed out after %ds", self._timeout)
+            raise LLMTimeoutError(f"LLM request timed out after {self._timeout}s")
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code
+            logger.error("Anthropic LLM API returned error status %d", status_code)
+            if status_code == 429:
+                raise LLMQuotaExhaustedError("LLM quota exhausted: API returned 429 Too Many Requests")
+            raise LLMResponseError(f"LLM API error: {status_code}")
+        except httpx.RequestError as exc:
+            logger.error("Anthropic LLM request failed: %s", exc)
+            raise LLMResponseError(f"LLM request failed: {exc}")
+
+        data = response.json()
+        content_blocks = data.get("content", [])
+        text = ""
+        for block in content_blocks:
+            if block.get("type") == "text":
+                text += block.get("text", "")
+
+        try:
+            result = json.loads(text)
+        except json.JSONDecodeError as exc:
+            logger.error("Anthropic LLM returned invalid JSON. preview=%s", _redact_for_log(text, REVIEW_RESULT_PREVIEW_LENGTH))
+            raise LLMResponseError(f"LLM returned invalid JSON: {exc}")
+
+        logger.info("Anthropic LLM response parsed successfully, result_preview=%s", _redact_for_log(json.dumps(result), REVIEW_RESULT_PREVIEW_LENGTH))
+        return result
+
+
 def create_llm_provider() -> LLMProvider:
     settings = get_settings()
     if settings.llm_mock_enabled or settings.llm_api_key is None:
         logger.info("Using MockLLMProvider (mock_enabled=%s, api_key_set=%s)", settings.llm_mock_enabled, settings.llm_api_key is not None)
         return MockLLMProvider()
 
+    api_key = settings.llm_api_key.get_secret_value()
+    if settings.llm_provider == "anthropic":
+        logger.info("Using AnthropicLLMProvider (model=%s, base_url=%s)", settings.llm_model, settings.llm_base_url)
+        return AnthropicLLMProvider(
+            api_key=api_key,
+            base_url=settings.llm_base_url,
+            model=settings.llm_model,
+            timeout=settings.llm_timeout,
+        )
+
     return OpenAICompatibleProvider(
-        api_key=settings.llm_api_key.get_secret_value(),
+        api_key=api_key,
         base_url=settings.llm_base_url,
         model=settings.llm_model,
         timeout=settings.llm_timeout,

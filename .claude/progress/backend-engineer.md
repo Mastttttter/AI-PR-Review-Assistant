@@ -13,5 +13,5 @@
 05:00 — Audited all logging: llm_adapter has 200-char truncation, logger.exception calls only log task_id (safe), prompt preview starts at SYSTEM_PROMPT (safe), need logging filter + field docs + tests
 05:05 — Implemented: SensitiveDataFilter, configure_app_logging, wired into main.py + jobs.py, documented sensitive fields in models.py, 17 new tests; 190/190 pass
 
-05:12 — Received task #13: Add baseline authentication and access checks
-05:15 — Implemented: APIKeyMiddleware (X-API-Key check), api_key setting, owner_name validation on task creation, 22 new tests; 242/242 pass
+05:20 — Received task #14: Implement Anthropic-compatible LLM provider
+05:22 — Implemented: AnthropicLLMProvider (Anthropic Messages API), APR_LLM_PROVIDER setting, LLMQuotaExhaustedError, factory updated, 17 new tests; 237/237 pass

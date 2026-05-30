@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-4o-mini"
     llm_timeout: int = Field(default=60, ge=1)
     llm_mock_enabled: bool = False
+    llm_provider: str = "openai"
 
 
 @lru_cache

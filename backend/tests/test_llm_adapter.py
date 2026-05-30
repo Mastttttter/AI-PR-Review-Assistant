@@ -11,8 +11,10 @@ from httpx import Response
 from apr_backend.core.settings import get_settings
 from apr_backend.services.llm_adapter import (
     LLMError,
+    LLMQuotaExhaustedError,
     LLMResponseError,
     LLMTimeoutError,
+    AnthropicLLMProvider,
     MockLLMProvider,
     OpenAICompatibleProvider,
     _extract_rule_ids_from_prompt,
@@ -235,6 +237,196 @@ class TestOpenAICompatibleProvider:
         assert request.headers["Authorization"] == "Bearer sk-test-key"
 
 
+class TestAnthropicLLMProvider:
+    @pytest.fixture
+    def provider(self) -> AnthropicLLMProvider:
+        return AnthropicLLMProvider(
+            api_key="sk-ant-test-key",
+            base_url="https://api.anthropic.example.com",
+            model="claude-test",
+            timeout=30,
+        )
+
+    @pytest.fixture
+    def mock_api(self):
+        with respx.mock(base_url="https://api.anthropic.example.com") as mock:
+            yield mock
+
+    def test_successful_call(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(
+            return_value=Response(
+                200,
+                json={
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": json.dumps({
+                                "summary": {"purpose": "anthropic test"},
+                                "risk": {"level": "medium", "reasons": ["moderate change"]},
+                                "issues": [],
+                            }),
+                        }
+                    ]
+                },
+            )
+        )
+
+        result = provider.generate_review(SAMPLE_PROMPT)
+        assert result["summary"]["purpose"] == "anthropic test"
+        assert result["risk"]["level"] == "medium"
+
+    def test_uses_x_api_key_header(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(
+            return_value=Response(
+                200,
+                json={
+                    "content": [
+                        {"type": "text", "text": json.dumps({"summary": {}, "risk": {"level": "low", "reasons": []}, "issues": []})}
+                    ]
+                },
+            )
+        )
+
+        provider.generate_review(SAMPLE_PROMPT)
+        request = mock_api.calls.last.request
+        assert request.headers["x-api-key"] == "sk-ant-test-key"
+
+    def test_uses_anthropic_version_header(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(
+            return_value=Response(
+                200,
+                json={
+                    "content": [
+                        {"type": "text", "text": json.dumps({"summary": {}, "risk": {"level": "low", "reasons": []}, "issues": []})}
+                    ]
+                },
+            )
+        )
+
+        provider.generate_review(SAMPLE_PROMPT)
+        request = mock_api.calls.last.request
+        assert request.headers["anthropic-version"] == "2023-06-01"
+
+    def test_request_body_has_messages_array(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(
+            return_value=Response(
+                200,
+                json={
+                    "content": [
+                        {"type": "text", "text": json.dumps({"summary": {}, "risk": {"level": "low", "reasons": []}, "issues": []})}
+                    ]
+                },
+            )
+        )
+
+        provider.generate_review(SAMPLE_PROMPT)
+        request = mock_api.calls.last.request
+        body = json.loads(request.content)
+        assert "messages" in body
+        assert body["messages"][0]["role"] == "user"
+        assert body["messages"][0]["content"] == SAMPLE_PROMPT
+
+    def test_request_body_has_system(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(
+            return_value=Response(
+                200,
+                json={
+                    "content": [
+                        {"type": "text", "text": json.dumps({"summary": {}, "risk": {"level": "low", "reasons": []}, "issues": []})}
+                    ]
+                },
+            )
+        )
+
+        provider.generate_review(SAMPLE_PROMPT)
+        request = mock_api.calls.last.request
+        body = json.loads(request.content)
+        assert "system" in body
+
+    def test_request_body_has_max_tokens(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(
+            return_value=Response(
+                200,
+                json={
+                    "content": [
+                        {"type": "text", "text": json.dumps({"summary": {}, "risk": {"level": "low", "reasons": []}, "issues": []})}
+                    ]
+                },
+            )
+        )
+
+        provider.generate_review(SAMPLE_PROMPT)
+        request = mock_api.calls.last.request
+        body = json.loads(request.content)
+        assert body["max_tokens"] == 4096
+
+    def test_timeout_raises_llm_timeout_error(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(side_effect=httpx.TimeoutException("timed out"))
+
+        with pytest.raises(LLMTimeoutError):
+            provider.generate_review(SAMPLE_PROMPT)
+
+    def test_http_error_raises_llm_response_error(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(return_value=Response(500, json={"error": "server error"}))
+
+        with pytest.raises(LLMResponseError):
+            provider.generate_review(SAMPLE_PROMPT)
+
+    def test_quota_exhausted_raises_llm_quota_exhausted_error(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(return_value=Response(429, json={"error": "rate limited"}))
+
+        with pytest.raises(LLMQuotaExhaustedError):
+            provider.generate_review(SAMPLE_PROMPT)
+
+    def test_invalid_json_response_raises_llm_response_error(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(
+            return_value=Response(
+                200,
+                json={"content": [{"type": "text", "text": "not valid json!!!"}]},
+            )
+        )
+
+        with pytest.raises(LLMResponseError):
+            provider.generate_review(SAMPLE_PROMPT)
+
+    def test_network_error_raises_llm_response_error(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(side_effect=httpx.ConnectError("connection refused"))
+
+        with pytest.raises(LLMResponseError):
+            provider.generate_review(SAMPLE_PROMPT)
+
+    def test_concatenates_multiple_text_blocks(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(
+            return_value=Response(
+                200,
+                json={
+                    "content": [
+                        {"type": "text", "text": '{"summary": {"purpose": "block1"},'},
+                        {"type": "text", "text": '"risk": {"level": "low", "reasons": []}, "issues": []}'},
+                    ]
+                },
+            )
+        )
+
+        result = provider.generate_review(SAMPLE_PROMPT)
+        assert result["summary"]["purpose"] == "block1"
+
+    def test_skips_non_text_blocks(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(
+            return_value=Response(
+                200,
+                json={
+                    "content": [
+                        {"type": "text", "text": json.dumps({"summary": {"purpose": "after tool"}, "risk": {"level": "low", "reasons": []}, "issues": []})},
+                    ]
+                },
+            )
+        )
+
+        result = provider.generate_review(SAMPLE_PROMPT)
+        assert result["summary"]["purpose"] == "after tool"
+
+
 class TestRedactedLogging:
     def test_short_text_is_not_redacted(self) -> None:
         assert _redact_for_log("hello", 100) == "hello"
@@ -276,6 +468,33 @@ class TestFactory:
         get_settings.cache_clear()
         assert isinstance(provider, OpenAICompatibleProvider)
 
+    def test_anthropic_provider_setting_returns_anthropic_provider(self, monkeypatch) -> None:
+        monkeypatch.setenv("APR_LLM_API_KEY", "sk-ant-key")
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
+        monkeypatch.setenv("APR_LLM_PROVIDER", "anthropic")
+        get_settings.cache_clear()
+        provider = create_llm_provider()
+        get_settings.cache_clear()
+        assert isinstance(provider, AnthropicLLMProvider)
+
+    def test_openai_provider_setting_returns_openai_provider(self, monkeypatch) -> None:
+        monkeypatch.setenv("APR_LLM_API_KEY", "sk-key")
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
+        monkeypatch.setenv("APR_LLM_PROVIDER", "openai")
+        get_settings.cache_clear()
+        provider = create_llm_provider()
+        get_settings.cache_clear()
+        assert isinstance(provider, OpenAICompatibleProvider)
+
+    def test_unknown_provider_defaults_to_openai(self, monkeypatch) -> None:
+        monkeypatch.setenv("APR_LLM_API_KEY", "sk-key")
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
+        monkeypatch.setenv("APR_LLM_PROVIDER", "some-unknown-provider")
+        get_settings.cache_clear()
+        provider = create_llm_provider()
+        get_settings.cache_clear()
+        assert isinstance(provider, OpenAICompatibleProvider)
+
 
 class TestLLMErrorHierarchy:
     def test_llm_error_is_exception(self) -> None:
@@ -289,3 +508,7 @@ class TestLLMErrorHierarchy:
     def test_response_error_is_llm_error(self) -> None:
         with pytest.raises(LLMError):
             raise LLMResponseError("response")
+
+    def test_quota_exhausted_error_is_llm_error(self) -> None:
+        with pytest.raises(LLMError):
+            raise LLMQuotaExhaustedError("quota")
