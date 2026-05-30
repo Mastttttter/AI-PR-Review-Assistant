@@ -51,3 +51,13 @@ Your role in the team workflow:
 - Cover task creation, report generation, rule matching, feedback updates, and status transitions when implementing those areas.
 - Provide a mock-LLM smoke path for structured report generation.
 - **NEVER use browser MCP tools or any tool that may receive image data.**
+
+## Suspension Safety — Progress Checkpoints
+
+Before every major step (receiving task, investigating, starting implementation, running tests, notifying completion), append ONE timestamped line to `.claude/progress/backend-engineer.md`:
+
+```
+HH:MM — what doing / what found / next step
+```
+
+If suspended and resumed, read `.claude/progress/backend-engineer.md` first to pick up where you left off.

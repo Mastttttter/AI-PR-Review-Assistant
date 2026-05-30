@@ -49,3 +49,13 @@ Your role in the team workflow:
 - Run relevant frontend checks.
 - For UI changes, verify code correctness via type checks and linting.
 - **NEVER use browser MCP tools or any tool that may receive image data.** All browser-based UI verification is handled exclusively by the testing engineer.
+
+## Suspension Safety — Progress Checkpoints
+
+Before every major step (receiving task, investigating, starting implementation, running tests, notifying completion), append ONE timestamped line to `.claude/progress/frontend-engineer.md`:
+
+```
+HH:MM — what doing / what found / next step
+```
+
+If suspended and resumed, read `.claude/progress/frontend-engineer.md` first to pick up where you left off.

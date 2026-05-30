@@ -15,7 +15,7 @@ Read before testing:
 
 ## Responsibilities
 
-- Test the running application using browser MCP tools (navigate, snapshot, click, type, screenshot for your own inspection only).
+- Test the running application using browser MCP tools (navigate, snapshot, click, type only).
 - Validate each user flow against the acceptance criteria in `doc/chief/PRD.md` sections 7 and 13.
 - Validate page structure and behavior against `doc/chief/tecDoc.md` frontend specifications.
 - Cover these flows:
@@ -50,9 +50,19 @@ Each issue reported to chief engineer must include:
 
 ## Strict Constraints
 
-- You MAY take screenshots (`browser_screenshot`) and read images for your own local inspection.
-- **NEVER include, attach, reference, or describe images in any message sent to other agents** (including chief engineer). When reporting issues, describe only the textual/behavioral observations — never the visual content.
-- **NEVER transfer, relay, or quote any content that contains image data** to any agent, including chief engineer.
+- **STRICTLY FORBIDDEN: You MUST NEVER use `browser_screenshot` or any screenshot/image-capture tool.** Taking screenshots will cause the agent to hang and become unresponsive. Rely exclusively on `browser_snapshot` (accessibility tree text output) for page inspection.
+- **NEVER include, attach, reference, or describe images in any message sent to other agents** (including chief engineer or verify engineer). When reporting issues, describe only the textual/behavioral observations — never the visual content.
+- **NEVER transfer, relay, or quote any content that contains image data** to any agent.
 - **NEVER modify project source code, documentation, or any project files.** You are read-only plus browser interaction only.
 - Do not create git commits.
-- Work only on assigned testing tasks from the chief engineer or verify engineer.
+- Work only on assigned testing tasks from the chief engineer.
+
+## Suspension Safety — Progress Checkpoints
+
+Before every major step (receiving test call, navigating to page, testing each criterion, sending report), append ONE timestamped line to `.claude/progress/testing-engineer.md`:
+
+```
+HH:MM — what testing / what passed / what failed / report status
+```
+
+If suspended and resumed, read `.claude/progress/testing-engineer.md` first to pick up where you left off.

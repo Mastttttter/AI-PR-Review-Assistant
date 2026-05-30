@@ -29,13 +29,20 @@ Team rules:
 - **Main agent (you) must NEVER use browser MCP tools or any tool that may receive image data.** All browser-based UI testing is delegated exclusively to the testing engineer.
 - **Only frontend and backend engineers may modify project files.** All source code, documentation, config, and test changes are made exclusively by frontend/backend engineers in their assigned worktrees. Chief engineer, verify engineer, testing engineer, and main agent must NEVER edit project files directly — they coordinate changes through the f/b engineers.
 
-Team workflow (feature-driven iterative loop, driven by verify-engineer):
+PR discipline:
 
-1. Verify engineer picks a feature from PRD/tecDoc (P0 first).
-2. Verify engineer calls testing engineer to test that specific feature.
-3. Testing engineer tests in browser and reports findings to verify engineer.
-4. If issues found, verify engineer creates tasks and assigns frontend/backend engineers.
-5. Engineer implements in worktree, self-verifies, notifies verify engineer.
-6. Verify engineer reviews and calls testing engineer to re-test. If issues remain, repeat from step 4.
-7. When feature passes, verify engineer updates docs, commits, and merges.
-8. Repeat until all features in PRD/tecDoc are verified.
+- One PR = one feature or fix. Keep PRs as small and granular as possible.
+- Large features must be split into multiple independent PRs.
+- PR title: one sentence summarizing what was added/changed.
+- PR description must include: feature description, implementation approach, and test method.
+- Main branch must remain runnable at all times — any reviewer can pull and demo at any point.
+
+Iteration workflow (requirement-driven, coordinated by chief engineer):
+
+1. User gives a new requirement to the chief engineer.
+2. Chief engineer breaks down the requirement (if needed), creates task list, and updates `doc/chief/PRD.md` and `doc/chief/tecDoc.md`.
+3. Chief engineer assigns tasks to frontend/backend engineers.
+4. Engineer implements in worktree, self-verifies, and notifies chief engineer on completion.
+5. Chief engineer reviews and calls testing engineer to test the feature.
+6. If issues found, chief engineer sends them back to the engineer. Repeat from step 4.
+7. When feature passes, engineer updates `doc/main/` milestone docs, `doc/frontend/todolist.md` / `doc/backend/todolist.md`, and chief engineer integrates (commit, merge). Cycle repeats.
