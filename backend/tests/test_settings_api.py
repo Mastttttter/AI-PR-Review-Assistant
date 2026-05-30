@@ -68,6 +68,8 @@ class TestGetSettings:
         assert body["openai"]["base_uri"] == "https://test.openai.com"
         assert body["openai"]["model"] == "test-model"
         assert body["anthropic"]["base_uri"] == "https://api.anthropic.com"
+        assert body["active_provider"] == "openai"
+        assert body["mock_enabled"] is False
 
     def test_masks_api_keys(self, client, clean_config, tmp_path, monkeypatch) -> None:
         monkeypatch.setenv("APR_OPENAI_API_KEY", "sk-abcdefgh12345678")
@@ -142,6 +144,28 @@ class TestPutSettings:
         assert body["openai"]["base_uri"] == "https://custom.openai.com/v1"
         assert body["openai"]["model"] == "gpt-4"
         assert body["anthropic"]["base_uri"] == "https://custom.anthropic.com"
+
+    def test_put_active_provider_and_mock_get_returns_them(self, client, clean_config, tmp_path, monkeypatch) -> None:
+        config_dir = tmp_path / "config"
+        config_path = config_dir / "config.json"
+        monkeypatch.setattr("apr_backend.api.settings.CONFIG_PATH", config_path)
+        monkeypatch.setattr("apr_backend.api.settings._CONFIG_DIR", config_dir)
+        monkeypatch.setattr("apr_backend.core.config_loader._CONFIG_PATH", config_path)
+
+        payload = {
+            "active_provider": "anthropic",
+            "mock_enabled": True,
+            "openai": {"base_uri": "https://openai.example.com", "api_key": "sk-openai", "model": "gpt-4"},
+            "anthropic": {"base_uri": "https://anthropic.example.com", "api_key": "sk-ant", "model": "claude-opus-4-7"},
+        }
+        client.put("/api/settings", json=payload, headers=OWNER)
+        get_settings.cache_clear()
+
+        response = client.get("/api/settings", headers=OWNER)
+        assert response.status_code == 200
+        body = response.json()
+        assert body["active_provider"] == "anthropic"
+        assert body["mock_enabled"] is True
 
 
 class TestPostTestSettings:
