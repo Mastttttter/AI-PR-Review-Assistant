@@ -134,3 +134,10 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Tests: 59 tests pass (12 new: 8 SettingsPage component tests + 4 API client settings tests); typecheck and build clean.
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer, 2026-05-30
+
+- [x] Add system prompt textarea to settings page
+  - Scope: Add systemPrompt field to SettingsResponse type and wire through getSettings/updateSettings; add multi-line textarea below mode/provider toggles in SettingsPage with label "系统提示词（自定义）" and placeholder "留空使用默认提示词"; include systemPrompt in save payload.
+  - Acceptance: User can view and edit system prompt; saves with other settings; loads on page refresh; empty textarea means default prompt is used.
+  - Tests: 65 tests pass (3 new SettingsPage tests, 2 updated API client tests); typecheck and build clean.
+  - Owner: frontend-engineer
+  - Signed-off: frontend-engineer, 2026-05-30
