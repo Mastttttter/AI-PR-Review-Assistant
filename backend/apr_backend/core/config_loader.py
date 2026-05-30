@@ -51,6 +51,8 @@ def load_llm_config() -> dict[str, Any]:
             if isinstance(file_config, dict):
                 if "active_provider" in file_config:
                     config["active_provider"] = file_config["active_provider"]
+                if "mock_enabled" in file_config:
+                    config["mock_enabled"] = file_config["mock_enabled"]
                 for provider in ("openai", "anthropic"):
                     if provider in file_config and isinstance(file_config[provider], dict):
                         for key in ("base_uri", "api_key", "model"):

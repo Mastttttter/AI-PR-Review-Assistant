@@ -28,6 +28,9 @@ def _masked_config(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
             masked = dict(config[provider])
             masked["api_key"] = _mask_key(config[provider].get("api_key"))
             result[provider] = masked
+    for key in ("active_provider", "mock_enabled"):
+        if key in config:
+            result[key] = config[key]
     return result
 
 
