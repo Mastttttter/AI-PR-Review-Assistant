@@ -250,6 +250,13 @@ All P0 and P1 backend features confirmed working via browser-based end-to-end te
 - History page with filters: PASS (all filters work)
 - User feedback persistence: PASS (feedback survives page refresh)
 
+3. Task #4 (commit 4913231): .env variable naming fix for real LLM
+   - Settings used env_prefix="APR_" expecting APR_LLM_API_KEY, APR_LLM_BASE_URL, APR_LLM_MODEL but .env had ANTHROPIC_AUTH_TOKEN, ANTHROPIC_BASE_URL, ANTHROPIC_MODEL
+   - Added APR_LLM_* variables to .env with real credentials from existing ANTHROPIC_* keys
+   - Updated .env.example to document all LLM configuration variables
+   - Adjusted test for mock_enabled path since .env now always provides the API key
+   - 173/173 tests passing; real LLM provider loads when APR_LLM_MOCK_ENABLED=false
+
 Backend is feature-complete for MVP.
 
 ## Verify AI Review Generation (Summary, Risk, Issues, Suggestions)

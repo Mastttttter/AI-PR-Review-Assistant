@@ -120,3 +120,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Tests: Type/static checks if configured; lint; unit tests; API tests; worker integration tests; migration tests.
   - Owner: backend-engineer
   - Signed-off: pending
+
+## Verification fixes
+
+- [x] Fix .env variable naming for real LLM
+  - Scope: Settings class uses env_prefix="APR_" expecting APR_LLM_API_KEY, APR_LLM_BASE_URL, APR_LLM_MODEL but .env had ANTHROPIC_AUTH_TOKEN, ANTHROPIC_BASE_URL, ANTHROPIC_MODEL. Added APR_LLM_* equivalents to .env with real credentials, updated .env.example to document LLM variables, and adjusted test for mock_enabled path since .env now always provides the API key.
+  - Acceptance: Real LLM provider is loaded when APR_LLM_MOCK_ENABLED=false; MockLLM still works when true.
+  - Tests: 173/173 passing.
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-30
