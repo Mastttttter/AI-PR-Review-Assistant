@@ -21,6 +21,10 @@ function neverRuleMutation(..._args: unknown[]): Promise<never> {
   throw new Error('rule mutation should not be triggered from this test');
 }
 
+function neverSettings(): Promise<never> {
+  throw new Error('settings should not be triggered from this test');
+}
+
 function renderForm(createReviewTask = vi.fn<(_: CreateReviewTaskRequest) => Promise<CreateReviewTaskResponse>>()) {
   const client = {
     createReviewTask,
@@ -35,6 +39,9 @@ function renderForm(createReviewTask = vi.fn<(_: CreateReviewTaskRequest) => Pro
     deleteReviewRule: neverRuleMutation,
     updateIssueFeedback: neverRuleMutation,
     getDashboardMetrics: async (): Promise<DashboardResponse> => ({ totalTasks: 0, tasksLast30Days: 0, totalIssues: 0, riskDistribution: { high: 0, medium: 0, low: 0 }, usefulRate: 0, falsePositiveRate: 0, adoptionRate: 0 }),
+    getSettings: neverSettings,
+    updateSettings: neverSettings,
+    testSettingsConnection: neverSettings,
   };
   render(
     <MemoryRouter initialEntries={['/reviews/new']}>

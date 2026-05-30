@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { ApiRequestError, apiClient } from './api';
-import type { ApiClient, CreateReviewTaskRequest, DashboardResponse, FeedbackStatus, IssueSeverity, ReviewIssue, ReviewReport, ReviewRule, ReviewTask, ReviewTaskListQuery, ReviewTaskStatus, RiskLevel, RuleType, UpsertReviewRuleRequest } from './api';
+import type { ApiClient, CreateReviewTaskRequest, DashboardResponse, FeedbackStatus, IssueSeverity, ProviderConfig, ReviewIssue, ReviewReport, ReviewRule, ReviewTask, ReviewTaskListQuery, ReviewTaskStatus, RiskLevel, RuleType, SettingsResponse, TestConnectionRequest, TestConnectionResponse, UpsertReviewRuleRequest } from './api';
 import { confidenceLevelLabels, feedbackStatusLabels, issueSeverityLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels, ruleTypeLabels } from './api';
 
 const MAX_DIFF_LENGTH = 50_000;
@@ -11,7 +11,7 @@ const navigationItems = [
   { label: '新建 Review', path: '/reviews/new' },
   { label: '历史记录', path: '/history' },
   { label: '规则配置', path: '/rules' },
-
+  { label: '助手设置', path: '/settings' },
 ];
 
 type ReviewTaskApi = Pick<ApiClient, 'createReviewTask'>;
@@ -20,11 +20,12 @@ type HistoryClientApi = Pick<ApiClient, 'listReviewTasks'>;
 type RulesClientApi = Pick<ApiClient, 'listReviewRules' | 'createReviewRule' | 'updateReviewRule' | 'enableReviewRule' | 'disableReviewRule' | 'deleteReviewRule'>;
 type FeedbackClientApi = Pick<ApiClient, 'updateIssueFeedback'>;
 type DashboardClientApi = Pick<ApiClient, 'getDashboardMetrics'>;
+type SettingsClientApi = Pick<ApiClient, 'getSettings' | 'updateSettings' | 'testSettingsConnection'>;
 
 type FormErrors = Partial<Record<keyof CreateReviewTaskRequest | 'submit', string>>;
 
 type AppProps = {
-  client?: ReviewTaskApi & ReportClientApi & HistoryClientApi & RulesClientApi & FeedbackClientApi & DashboardClientApi;
+  client?: ReviewTaskApi & ReportClientApi & HistoryClientApi & RulesClientApi & FeedbackClientApi & DashboardClientApi & SettingsClientApi;
   pollIntervalMs?: number;
 };
 
@@ -851,6 +852,199 @@ const severityGroupLabel: Record<IssueSeverity, string> = {
   low: '低风险问题',
 };
 
+function maskApiKey(key: string): string {
+  if (!key) return '';
+  return '****' + key.slice(-4);
+}
+
+function isMasked(value: string): boolean {
+  return value.startsWith('*');
+}
+
+function SettingsPage({ client }: { client: SettingsClientApi }) {
+  const [openai, setOpenai] = useState<ProviderConfig>({ baseUri: '', apiKey: '', model: '' });
+  const [anthropic, setAnthropic] = useState<ProviderConfig>({ baseUri: '', apiKey: '', model: '' });
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const [testingOpenai, setTestingOpenai] = useState(false);
+  const [testOpenaiResult, setTestOpenaiResult] = useState<TestConnectionResponse | null>(null);
+  const [testingAnthropic, setTestingAnthropic] = useState(false);
+  const [testAnthropicResult, setTestAnthropicResult] = useState<TestConnectionResponse | null>(null);
+
+  const [revealOpenaiKey, setRevealOpenaiKey] = useState(false);
+  const [revealAnthropicKey, setRevealAnthropicKey] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadError(null);
+    client.getSettings()
+      .then((data) => {
+        if (active) { setOpenai(data.openai); setAnthropic(data.anthropic); setLoading(false); }
+      })
+      .catch((e) => {
+        if (active) {
+          setLoadError(e instanceof ApiRequestError ? e.message : '加载设置失败，请稍后重试。');
+          setLoading(false);
+        }
+      });
+    return () => { active = false; };
+  }, [client]);
+
+  async function handleSave() {
+    setSaving(true);
+    setSaved(false);
+    setSaveError(null);
+    const safePayload: SettingsResponse = {
+      openai: { ...openai, apiKey: isMasked(openai.apiKey) ? '' : openai.apiKey },
+      anthropic: { ...anthropic, apiKey: isMasked(anthropic.apiKey) ? '' : anthropic.apiKey },
+    };
+    try {
+      await client.updateSettings(safePayload);
+      setSaved(true);
+    } catch (e) {
+      setSaveError(e instanceof ApiRequestError ? e.message : '保存设置失败，请稍后重试。');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleTest(provider: string, config: ProviderConfig) {
+    if (provider === 'openai') {
+      setTestingOpenai(true);
+      setTestOpenaiResult(null);
+    } else {
+      setTestingAnthropic(true);
+      setTestAnthropicResult(null);
+    }
+    try {
+      const request: TestConnectionRequest = {
+        provider,
+        baseUri: config.baseUri,
+        model: config.model,
+      };
+      if (!isMasked(config.apiKey)) {
+        request.apiKey = config.apiKey;
+      }
+      const result = await client.testSettingsConnection(request);
+      if (provider === 'openai') setTestOpenaiResult(result);
+      else setTestAnthropicResult(result);
+    } catch (e) {
+      const errorResult: TestConnectionResponse = {
+        success: false,
+        message: e instanceof ApiRequestError ? e.message : '连接测试失败。',
+      };
+      if (provider === 'openai') setTestOpenaiResult(errorResult);
+      else setTestAnthropicResult(errorResult);
+    } finally {
+      if (provider === 'openai') setTestingOpenai(false);
+      else setTestingAnthropic(false);
+    }
+  }
+
+  function updateProvider(provider: 'openai' | 'anthropic', field: keyof ProviderConfig, value: string) {
+    setSaved(false);
+    setSaveError(null);
+    setTestOpenaiResult(null);
+    setTestAnthropicResult(null);
+    if (provider === 'openai') {
+      setOpenai((prev) => ({ ...prev, [field]: value }));
+    } else {
+      setAnthropic((prev) => ({ ...prev, [field]: value }));
+    }
+  }
+
+  function renderProviderSection(
+    label: string,
+    providerKey: 'openai' | 'anthropic',
+    config: ProviderConfig,
+    testing: boolean,
+    testResult: TestConnectionResponse | null,
+    revealKey: boolean,
+    setRevealKey: (v: boolean) => void,
+  ) {
+    return (
+      <section className="settings-provider">
+        <h4 className="settings-provider-title">{label}</h4>
+        <div className="form-grid">
+          <label className="form-field">
+            <span>Base URI</span>
+            <input
+              value={config.baseUri}
+              onChange={(e) => updateProvider(providerKey, 'baseUri', e.target.value)}
+              placeholder="https://api.openai.com/v1"
+            />
+          </label>
+          <label className="form-field">
+            <span>API Key</span>
+            <div className="api-key-field">
+              <input
+                value={revealKey ? config.apiKey : maskApiKey(config.apiKey)}
+                onFocus={() => { if (!revealKey && config.apiKey) setRevealKey(true); }}
+                onChange={(e) => updateProvider(providerKey, 'apiKey', e.target.value)}
+                placeholder="sk-..."
+              />
+              <button
+                type="button"
+                className="reveal-toggle"
+                onClick={() => setRevealKey(!revealKey)}
+              >
+                {revealKey ? '隐藏' : '显示'}
+              </button>
+            </div>
+          </label>
+          <label className="form-field">
+            <span>Model</span>
+            <input
+              value={config.model}
+              onChange={(e) => updateProvider(providerKey, 'model', e.target.value)}
+              placeholder="gpt-4"
+            />
+          </label>
+        </div>
+        <div className="settings-provider-actions">
+          <button type="button" className="secondary-button" disabled={testing} onClick={() => handleTest(providerKey, config)}>
+            {testing ? '测试中...' : '测试连接'}
+          </button>
+          {testResult ? (
+            <span className={`test-result-badge ${testResult.success ? 'test-success' : 'test-failure'}`}>
+              {testResult.success ? '连接成功' : '连接失败'}: {testResult.message}
+            </span>
+          ) : null}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <PageCard title="助手设置" description="配置 AI 服务提供商的连接信息，当前支持 OpenAI 和 Anthropic 协议。">
+      <div className="settings-page">
+        {loading ? <LoadingShell label="加载设置..." /> : null}
+        {loadError ? <ErrorShell message={loadError} /> : null}
+
+        {!loading && !loadError ? (
+          <>
+            {renderProviderSection('OpenAI', 'openai', openai, testingOpenai, testOpenaiResult, revealOpenaiKey, setRevealOpenaiKey)}
+            {renderProviderSection('Anthropic', 'anthropic', anthropic, testingAnthropic, testAnthropicResult, revealAnthropicKey, setRevealAnthropicKey)}
+
+            <div className="settings-save-bar">
+              <button type="button" className="primary-button" disabled={saving} onClick={handleSave}>
+                {saving ? '保存中...' : '保存配置'}
+              </button>
+              {saved ? <span className="save-success-badge">已保存</span> : null}
+              {saveError ? <span className="save-error-badge">{saveError}</span> : null}
+            </div>
+          </>
+        ) : null}
+      </div>
+    </PageCard>
+  );
+}
+
 function NotFoundPage() {
   return <PageCard title="页面不存在" description="当前路径没有对应页面，请通过左侧导航返回 MVP 功能入口。" />;
 }
@@ -881,6 +1075,7 @@ export function App({ client = apiClient, pollIntervalMs }: AppProps) {
         <Route path="/reviews/new" element={<NewReviewPage client={client} />} />
         <Route path="/history" element={<HistoryPage client={client} />} />
         <Route path="/rules" element={<RulesPage client={client} />} />
+        <Route path="/settings" element={<SettingsPage client={client} />} />
         <Route path="/reviews/:taskId" element={<ReportPage client={client} pollIntervalMs={pollIntervalMs} />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
