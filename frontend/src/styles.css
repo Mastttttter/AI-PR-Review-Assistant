@@ -570,7 +570,6 @@ h3 { font-size: clamp(2.2rem, 5vw, 5.2rem); }
 
 .pr-meta-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
   gap: 0.65rem;
   margin: 0;
 }
