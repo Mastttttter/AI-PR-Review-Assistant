@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from apr_backend.api.health import router as health_router
 from apr_backend.api.issue_feedback import router as issue_feedback_router
 from apr_backend.api.metrics import router as metrics_router
+from apr_backend.api.pr_fetch import router as pr_fetch_router
 from apr_backend.api.review_rules import router as review_rules_router
 from apr_backend.api.review_tasks import router as review_tasks_router
 from apr_backend.api.settings import router as settings_router
@@ -24,6 +25,7 @@ def create_app() -> FastAPI:
     app.include_router(issue_feedback_router)
     app.include_router(metrics_router)
     app.include_router(settings_router)
+    app.include_router(pr_fetch_router)
     return app
 
 
