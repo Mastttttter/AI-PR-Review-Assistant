@@ -125,3 +125,12 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Tests: 45 tests pass after removing 8 duplicate tests.
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer, verify-engineer 2026-05-30
+
+## Assistant settings feature
+
+- [x] Add assistant settings page with AI provider configuration UI
+  - Scope: Build SettingsPage at /settings route with OpenAI and Anthropic provider forms; add nav item, route, API types, and client methods; implement masked API key display with reveal toggle; handle load, edit, save, save-success, save-error, testing, test-success, and test-failure states; fix masked-key sentinel handling so masked backend keys are cleared to empty on save and omitted on test.
+  - Acceptance: Users can view and edit provider configs, save them, and test connectivity per provider; masked API keys display last 4 chars and auto-reveal on focus; save/load uses GET/PUT /api/settings; test uses POST /api/settings/test; green success/red failure badges shown inline.
+  - Tests: 59 tests pass (12 new: 8 SettingsPage component tests + 4 API client settings tests); typecheck and build clean.
+  - Owner: frontend-engineer
+  - Signed-off: frontend-engineer, 2026-05-30

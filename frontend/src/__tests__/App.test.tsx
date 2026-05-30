@@ -3,7 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { App } from '../App';
-import type { DashboardResponse, ReviewReport, ReviewTask, ReviewTaskListQuery } from '../api';
+import { ApiRequestError } from '../api';
+import type { DashboardResponse, ReviewReport, ReviewTask, ReviewTaskListQuery, SettingsResponse } from '../api';
 import { emptyReport, minimalReport, mockReviewReport, mockReviewTask, mockTaskList } from '../test-fixtures/mockReview';
 
 async function neverCalled(): Promise<never> {
@@ -30,6 +31,10 @@ function neverFeedback(..._args: unknown[]): Promise<never> {
   throw new Error('should not be called');
 }
 
+async function neverSettings(): Promise<never> {
+  throw new Error('should not be called');
+}
+
 async function emptyDashboard(): Promise<DashboardResponse> {
   return {
     totalTasks: 0,
@@ -42,7 +47,7 @@ async function emptyDashboard(): Promise<DashboardResponse> {
   };
 }
 
-function renderAt(path: string, client: Record<string, unknown> = { createReviewTask: neverCalled, getReviewTask: neverCalled, getReviewReport: neverCalled, listReviewTasks: neverTasks, listReviewRules: emptyRules, createReviewRule: neverRuleMutation, updateReviewRule: neverRuleMutation, enableReviewRule: neverRuleMutation, disableReviewRule: neverRuleMutation, deleteReviewRule: neverRuleMutation, updateIssueFeedback: neverFeedback, getDashboardMetrics: emptyDashboard }, pollIntervalMs?: number) {
+function renderAt(path: string, client: Record<string, unknown> = { createReviewTask: neverCalled, getReviewTask: neverCalled, getReviewReport: neverCalled, listReviewTasks: neverTasks, listReviewRules: emptyRules, createReviewRule: neverRuleMutation, updateReviewRule: neverRuleMutation, enableReviewRule: neverRuleMutation, disableReviewRule: neverRuleMutation, deleteReviewRule: neverRuleMutation, updateIssueFeedback: neverFeedback, getDashboardMetrics: emptyDashboard, getSettings: neverSettings, updateSettings: neverSettings, testSettingsConnection: neverSettings }, pollIntervalMs?: number) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <App client={client as never} pollIntervalMs={pollIntervalMs} />
@@ -56,6 +61,7 @@ describe('application shell routes', () => {
     ['/reviews/new', '新建 Review'],
     ['/history', '历史记录'],
     ['/rules', '规则配置'],
+    ['/settings', '助手设置'],
   ])('renders %s route', (path, heading) => {
     renderAt(path);
     expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument();
@@ -78,6 +84,9 @@ describe('application shell routes', () => {
 
     await user.click(screen.getByRole('link', { name: '规则配置' }));
     expect(screen.getByRole('heading', { name: '规则配置' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: '助手设置' }));
+    expect(screen.getByRole('heading', { name: '助手设置' })).toBeInTheDocument();
   });
 });
 
@@ -336,6 +345,137 @@ describe('History records page', () => {
     const listReviewTasks = vi.fn(async () => { throw new Error('Network error'); });
     renderAt('/history', { listReviewTasks });
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('加载历史记录失败'));
+  });
+});
+
+describe('Settings page', () => {
+  const mockSettings: SettingsResponse = {
+    openai: { baseUri: 'https://api.openai.com/v1', apiKey: '***-729f', model: 'gpt-4' },
+    anthropic: { baseUri: 'https://api.anthropic.com', apiKey: '***-83ab', model: 'claude-3-opus' },
+  };
+
+  function settingsClient(overrides: Partial<{
+    getSettings: () => Promise<SettingsResponse>;
+    updateSettings: (req: SettingsResponse) => Promise<SettingsResponse>;
+    testSettingsConnection: () => Promise<{ success: boolean; message: string }>;
+  }> = {}) {
+    return {
+      createReviewTask: async () => { throw new Error('should not be called'); },
+      getReviewTask: async () => { throw new Error('should not be called'); },
+      getReviewReport: async () => { throw new Error('should not be called'); },
+      listReviewTasks: async () => [],
+      listReviewRules: async () => [],
+      createReviewRule: async () => { throw new Error('should not be called'); },
+      updateReviewRule: async () => { throw new Error('should not be called'); },
+      enableReviewRule: async () => { throw new Error('should not be called'); },
+      disableReviewRule: async () => { throw new Error('should not be called'); },
+      deleteReviewRule: async () => { throw new Error('should not be called'); },
+      updateIssueFeedback: async () => { throw new Error('should not be called'); },
+      getDashboardMetrics: async () => ({ totalTasks: 0, tasksLast30Days: 0, totalIssues: 0, riskDistribution: { high: 0, medium: 0, low: 0 }, usefulRate: 0, falsePositiveRate: 0, adoptionRate: 0 }),
+      getSettings: overrides.getSettings ?? (async () => mockSettings),
+      updateSettings: overrides.updateSettings ?? (async () => mockSettings),
+      testSettingsConnection: overrides.testSettingsConnection ?? (async () => ({ success: true, message: 'ok' })),
+    };
+  }
+
+  it('renders both provider sections with fields', async () => {
+    renderAt('/settings', settingsClient());
+    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+    expect(screen.getByText('Anthropic')).toBeInTheDocument();
+    expect(screen.getAllByText('Base URI').length).toBe(2);
+    expect(screen.getAllByText('API Key').length).toBe(2);
+    expect(screen.getAllByText('Model').length).toBe(2);
+    expect(screen.getAllByText('测试连接').length).toBe(2);
+    expect(screen.getByText('保存配置')).toBeInTheDocument();
+  });
+
+  it('masks API keys on load showing last 4 chars', async () => {
+    renderAt('/settings', settingsClient());
+    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+    const inputs = screen.getAllByPlaceholderText('sk-...');
+    expect(inputs.length).toBe(2);
+    expect((inputs[0] as HTMLInputElement).value).toBe('****729f');
+    expect((inputs[1] as HTMLInputElement).value).toBe('****83ab');
+  });
+
+  it('reveals API key on focus', async () => {
+    renderAt('/settings', settingsClient());
+    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+    const inputs = screen.getAllByPlaceholderText('sk-...');
+    (inputs[0] as HTMLInputElement).focus();
+    await waitFor(() => expect((inputs[0] as HTMLInputElement).value).toBe('***-729f'));
+  });
+
+  it('handles getSettings load error', async () => {
+    const getSettings = vi.fn(async () => { throw new Error('Network error'); });
+    renderAt('/settings', settingsClient({ getSettings }));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('加载设置失败'));
+  });
+
+  it('saves settings with masked keys cleared to empty', async () => {
+    const updateSettings = vi.fn(async (req: SettingsResponse) => req);
+    renderAt('/settings', settingsClient({ updateSettings }));
+    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+
+    await userEvent.click(screen.getByText('保存配置'));
+    await waitFor(() => expect(updateSettings).toHaveBeenCalledWith({
+      openai: { baseUri: 'https://api.openai.com/v1', apiKey: '', model: 'gpt-4' },
+      anthropic: { baseUri: 'https://api.anthropic.com', apiKey: '', model: 'claude-3-opus' },
+    }));
+    expect(screen.getByText('已保存')).toBeInTheDocument();
+  });
+
+  it('shows save error on failure', async () => {
+    const updateSettings = vi.fn(async () => { throw new ApiRequestError('保存失败', 500); });
+    renderAt('/settings', settingsClient({ updateSettings }));
+    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+
+    await userEvent.click(screen.getByText('保存配置'));
+    await waitFor(() => expect(screen.getByText('保存失败')).toBeInTheDocument());
+  });
+
+  it('tests connection with masked key omits apiKey', async () => {
+    const testSettingsConnection = vi.fn(async () => ({ success: true, message: '连接成功' }));
+    renderAt('/settings', settingsClient({ testSettingsConnection }));
+    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+
+    const buttons = screen.getAllByText('测试连接');
+    await userEvent.click(buttons[0]);
+    await waitFor(() => expect(testSettingsConnection).toHaveBeenCalledWith({
+      provider: 'openai',
+      baseUri: 'https://api.openai.com/v1',
+      model: 'gpt-4',
+    }));
+    expect(screen.getByText(/连接成功/)).toBeInTheDocument();
+  });
+
+  it('tests connection with user-typed key includes apiKey', async () => {
+    const testSettingsConnection = vi.fn(async () => ({ success: true, message: '连接成功' }));
+    renderAt('/settings', settingsClient({ testSettingsConnection }));
+    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+
+    const inputs = screen.getAllByPlaceholderText('sk-...');
+    (inputs[0] as HTMLInputElement).focus();
+    await userEvent.clear(inputs[0]);
+    await userEvent.type(inputs[0], 'sk-new-key');
+    const buttons = screen.getAllByText('测试连接');
+    await userEvent.click(buttons[0]);
+    await waitFor(() => expect(testSettingsConnection).toHaveBeenCalledWith({
+      provider: 'openai',
+      baseUri: 'https://api.openai.com/v1',
+      apiKey: 'sk-new-key',
+      model: 'gpt-4',
+    }));
+  });
+
+  it('tests connection and shows failure', async () => {
+    const testSettingsConnection = vi.fn(async () => { throw new Error('Connection refused'); });
+    renderAt('/settings', settingsClient({ testSettingsConnection }));
+    await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument());
+
+    const buttons = screen.getAllByText('测试连接');
+    await userEvent.click(buttons[0]);
+    await waitFor(() => expect(screen.getByText(/连接失败/)).toBeInTheDocument());
   });
 });
 

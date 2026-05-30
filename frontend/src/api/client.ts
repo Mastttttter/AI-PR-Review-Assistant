@@ -4,10 +4,14 @@ import type {
   DashboardResponse,
   FeedbackRequest,
   FeedbackResponse,
+  ProviderConfig,
   ReviewReport,
   ReviewRule,
   ReviewTask,
   ReviewTaskListQuery,
+  SettingsResponse,
+  TestConnectionRequest,
+  TestConnectionResponse,
   UpsertReviewRuleRequest
 } from './types';
 
@@ -164,6 +168,18 @@ export class ApiClient {
 
   async updateIssueFeedback(issueId: string, request: FeedbackRequest): Promise<FeedbackResponse> {
     return this.request<FeedbackResponse>(`/review-issues/${encodeURIComponent(issueId)}/feedback`, { method: 'PATCH', body: request });
+  }
+
+  async getSettings(): Promise<SettingsResponse> {
+    return this.request<SettingsResponse>('/settings');
+  }
+
+  async updateSettings(request: SettingsResponse): Promise<SettingsResponse> {
+    return this.request<SettingsResponse>('/settings', { method: 'PUT', body: request });
+  }
+
+  async testSettingsConnection(request: TestConnectionRequest): Promise<TestConnectionResponse> {
+    return this.request<TestConnectionResponse>('/settings/test', { method: 'POST', body: request });
   }
 
   private async request<T>(path: string, init: { method?: string; body?: RequestBody } = {}): Promise<T> {

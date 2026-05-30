@@ -137,3 +137,26 @@ export interface DashboardResponse {
   falsePositiveRate: number;
   adoptionRate: number;
 }
+
+export interface ProviderConfig {
+  baseUri: string;
+  apiKey: string;
+  model: string;
+}
+
+export interface SettingsResponse {
+  openai: ProviderConfig;
+  anthropic: ProviderConfig;
+}
+
+export interface TestConnectionRequest {
+  provider: string;
+  baseUri: string;
+  apiKey?: string;
+  model: string;
+}
+
+export interface TestConnectionResponse {
+  success: boolean;
+  message: string;
+}

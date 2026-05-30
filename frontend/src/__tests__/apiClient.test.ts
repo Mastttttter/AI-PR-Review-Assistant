@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiClient, ApiRequestError, feedbackStatusLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels } from '../api';
+import type { SettingsResponse } from '../api';
 import { mockReviewReport, mockReviewRule } from '../test-fixtures/mockReview';
 
 function jsonResponse(payload: unknown, init: ResponseInit = {}) {
@@ -125,5 +126,76 @@ describe('ApiClient', () => {
     expect(riskLevelLabels.high).toBe('高风险');
     expect(issueTypeLabels.test_missing).toBe('测试缺失');
     expect(feedbackStatusLabels.false_positive).toBe('误报');
+  });
+
+  it('fetches settings response with camelCase keys', async () => {
+    const fetcher = vi.fn(async () => jsonResponse({
+      openai: { base_uri: 'https://api.openai.com/v1', api_key: 'sk-abc', model: 'gpt-4' },
+      anthropic: { base_uri: 'https://api.anthropic.com', api_key: 'sk-ant-xyz', model: 'claude-3-opus' },
+    }));
+    const client = new ApiClient({ fetcher });
+
+    const settings = await client.getSettings();
+
+    expect(settings.openai.baseUri).toBe('https://api.openai.com/v1');
+    expect(settings.openai.apiKey).toBe('sk-abc');
+    expect(settings.anthropic.baseUri).toBe('https://api.anthropic.com');
+    expect(settings.anthropic.apiKey).toBe('sk-ant-xyz');
+  });
+
+  it('serializes updateSettings with snake_case keys', async () => {
+    const fetcher = vi.fn(async () => jsonResponse({
+      openai: { base_uri: 'https://api.openai.com/v1', api_key: 'sk-abc', model: 'gpt-4' },
+      anthropic: { base_uri: 'https://api.anthropic.com', api_key: 'sk-ant-xyz', model: 'claude-3-opus' },
+    }));
+    const client = new ApiClient({ baseUrl: '/api', fetcher });
+
+    const payload: SettingsResponse = {
+      openai: { baseUri: 'https://api.openai.com/v1', apiKey: 'sk-abc', model: 'gpt-4' },
+      anthropic: { baseUri: 'https://api.anthropic.com', apiKey: 'sk-ant-xyz', model: 'claude-3-opus' },
+    };
+    await client.updateSettings(payload);
+
+    expect(fetcher).toHaveBeenCalledWith('/api/settings', expect.objectContaining({
+      method: 'PUT',
+      body: JSON.stringify({
+        openai: { base_uri: 'https://api.openai.com/v1', api_key: 'sk-abc', model: 'gpt-4' },
+        anthropic: { base_uri: 'https://api.anthropic.com', api_key: 'sk-ant-xyz', model: 'claude-3-opus' },
+      }),
+    }));
+  });
+
+  it('sends test connection request and returns result', async () => {
+    const fetcher = vi.fn(async () => jsonResponse({ success: true, message: '连接成功' }));
+    const client = new ApiClient({ baseUrl: '/api', fetcher });
+
+    const result = await client.testSettingsConnection({
+      provider: 'openai',
+      baseUri: 'https://api.openai.com/v1',
+      apiKey: 'sk-test',
+      model: 'gpt-4',
+    });
+
+    expect(result).toEqual({ success: true, message: '连接成功' });
+    expect(fetcher).toHaveBeenCalledWith('/api/settings/test', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({
+        provider: 'openai',
+        base_uri: 'https://api.openai.com/v1',
+        api_key: 'sk-test',
+        model: 'gpt-4',
+      }),
+    }));
+  });
+
+  it('handles settings load error with readable message', async () => {
+    const fetcher = vi.fn(async () => jsonResponse({ detail: '配置加载失败' }, { status: 500 }));
+    const client = new ApiClient({ fetcher });
+
+    await expect(client.getSettings()).rejects.toMatchObject({
+      name: 'ApiRequestError',
+      status: 500,
+      message: '配置加载失败',
+    } satisfies Partial<ApiRequestError>);
   });
 });

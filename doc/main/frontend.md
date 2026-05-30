@@ -366,3 +366,31 @@ Delivered scope:
 - Dev server confirmed serving SPA HTML.
 
 Branch: frontend-reorg
+
+## Assistant settings page with AI provider configuration
+
+Status: completed by frontend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- SettingsPage component at /settings route with sidebar nav item "助手设置".
+- Dual provider sections (OpenAI, Anthropic), each with Base URI text input, API Key input with masked display (last 4 chars only, e.g. "****729f"), reveal/hide toggle, and Model text input.
+- API key field auto-reveals on focus for editing; mask restores when not revealed.
+- "保存配置" button triggers PUT /api/settings with both provider configs; masked API keys are cleared to empty string so the backend preserves stored credentials.
+- Per-provider "测试连接" button triggers POST /api/settings/test; green success or red failure badge with server message shown inline below the button.
+- Masked API keys are omitted from test connection payloads so the backend uses the real stored key; user-typed keys are included in the request.
+- Load state (spinner while fetching GET /api/settings), save state (disabled button + "保存中..."), save success ("已保存" badge), save error (red message), and per-provider test states (disabled button + "测试中...").
+- New API types: ProviderConfig, SettingsResponse, TestConnectionRequest (apiKey optional), TestConnectionResponse.
+- New API client methods: getSettings(), updateSettings(), testSettingsConnection() with snake_case serialization.
+- SettingsClientApi type added to AppProps intersection.
+
+Bug fix: backend returns masked API keys (e.g. `***-729f`). `isMasked()` helper (checks `startsWith('*')`) prevents these from being sent back in save/test payloads. Save clears them to empty; test omits the field entirely.
+
+Verification:
+
+- `pnpm typecheck` passes.
+- `pnpm test` passes with 59 tests (12 new: 8 SettingsPage component tests, 4 API client settings tests).
+- `pnpm build` passes.
+- Browser-based verification by testing engineer confirmed: save/load works, masked keys handled correctly, test connectivity returns inline results.
+
+Branch: feat/frontend-settings-page
