@@ -132,7 +132,7 @@ export interface FeedbackResponse {
 
 export interface DashboardResponse {
   totalTasks: number;
-  tasksLast30Days: number;
+  recentTasks: number;
   totalIssues: number;
   riskDistribution: Record<string, number>;
   usefulRate: number;

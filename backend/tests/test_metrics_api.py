@@ -159,10 +159,10 @@ class TestDashboard:
         assert dist["medium"] == 1
         assert dist["low"] == 2
 
-    def test_tasks_last_30_days(self, client, session_factory) -> None:
+    def test_recent_tasks(self, client, session_factory) -> None:
         _seed_tasks(session_factory)
         resp = client.get("/api/metrics/dashboard", headers=OWNER)
-        assert resp.json()["tasks_last_30_days"] == 3
+        assert resp.json()["recent_tasks"] == 3
 
     def test_total_issues_excludes_deleted_task_issues(self, client, session_factory) -> None:
         _seed_tasks(session_factory)

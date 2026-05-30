@@ -109,7 +109,7 @@ function WorkbenchPage({ client }: { client: DashboardClientApi }) {
         <div className="metric-grid">
           <div><strong>{metrics.totalTasks}</strong><span>总任务</span></div>
           <div><strong>{metrics.totalIssues}</strong><span>总问题数</span></div>
-          <div><strong>{metrics.tasksLast30Days}</strong><span>近 30 天任务</span></div>
+          <div><strong>{metrics.recentTasks}</strong><span>近 30 天任务</span></div>
           <div className="stat-high"><strong>{metrics.riskDistribution.high ?? 0}</strong><span>高风险任务</span></div>
           <div className="stat-medium"><strong>{metrics.riskDistribution.medium ?? 0}</strong><span>中风险任务</span></div>
           <div className="stat-low"><strong>{metrics.riskDistribution.low ?? 0}</strong><span>低风险任务</span></div>

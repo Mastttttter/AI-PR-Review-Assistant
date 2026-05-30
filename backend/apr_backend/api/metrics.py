@@ -18,7 +18,7 @@ DbSession = Annotated[Session, Depends(get_db)]
 
 class DashboardResponse(BaseModel):
     total_tasks: int
-    tasks_last_30_days: int
+    recent_tasks: int
     total_issues: int
     risk_distribution: dict[str, int]
     useful_rate: float
@@ -102,7 +102,7 @@ def _feedback_rate(db: Session, demo_owner: str, status: FeedbackStatus) -> floa
 def get_dashboard_metrics(demo_owner: DemoOwnerHeader, db: DbSession) -> DashboardResponse:
     return DashboardResponse(
         total_tasks=_count_tasks(db, demo_owner),
-        tasks_last_30_days=_count_tasks_recent(db, demo_owner),
+        recent_tasks=_count_tasks_recent(db, demo_owner),
         total_issues=_count_total_issues(db, demo_owner),
         risk_distribution=_risk_distribution(db, demo_owner),
         useful_rate=_feedback_rate(db, demo_owner, FeedbackStatus.useful),
