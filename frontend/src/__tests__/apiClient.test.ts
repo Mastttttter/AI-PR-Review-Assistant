@@ -218,12 +218,22 @@ describe('ApiClient', () => {
       title: 'PR Title',
       description: 'PR Desc',
       diff_content: 'diff --git a/file.ts b/file.ts',
+      project_name: 'my-project',
+      target_branch: 'main',
+      developer_name: 'Bob',
     }));
     const client = new ApiClient({ baseUrl: '/api', fetcher });
 
     const result = await client.fetchPrInfo('https://github.com/owner/repo/pull/1');
 
-    expect(result).toEqual({ title: 'PR Title', description: 'PR Desc', diffContent: 'diff --git a/file.ts b/file.ts' } satisfies FetchPrResponse);
+    expect(result).toEqual({
+      title: 'PR Title',
+      description: 'PR Desc',
+      diffContent: 'diff --git a/file.ts b/file.ts',
+      projectName: 'my-project',
+      targetBranch: 'main',
+      developerName: 'Bob',
+    } satisfies FetchPrResponse);
     expect(fetcher).toHaveBeenCalledWith('/api/pr-fetch', expect.objectContaining({
       method: 'POST',
       body: JSON.stringify({ url: 'https://github.com/owner/repo/pull/1' }),

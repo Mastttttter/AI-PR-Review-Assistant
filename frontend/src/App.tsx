@@ -145,6 +145,7 @@ function NewReviewPage({ client }: { client: ReviewTaskApi }) {
     projectName: '',
     targetBranch: '',
     developerName: '',
+    prUrl: '',
     diffContent: ''
   });
   const [errors, setErrors] = useState<FormErrors>({});
@@ -169,6 +170,10 @@ function NewReviewPage({ client }: { client: ReviewTaskApi }) {
       updateField('prTitle', result.title);
       updateField('prDescription', result.description);
       updateField('diffContent', result.diffContent);
+      updateField('projectName', result.projectName);
+      updateField('targetBranch', result.targetBranch);
+      updateField('developerName', result.developerName);
+      updateField('prUrl', fetchUrl.trim());
     } catch (e) {
       setFetchError(e instanceof ApiRequestError ? e.message : '获取 PR 信息失败，请稍后重试。');
     } finally {
@@ -183,6 +188,7 @@ function NewReviewPage({ client }: { client: ReviewTaskApi }) {
       projectName: emptyToUndefined(form.projectName ?? ''),
       targetBranch: emptyToUndefined(form.targetBranch ?? ''),
       developerName: emptyToUndefined(form.developerName ?? ''),
+      prUrl: emptyToUndefined(form.prUrl ?? ''),
       diffContent: form.diffContent
     };
     const validationErrors = validateReviewRequest(request);
@@ -796,6 +802,7 @@ function ReportDetailCard({ report, client }: { report: ReviewReport; client: Fe
             {task.projectName ? <div><dt>所属项目</dt><dd>{task.projectName}</dd></div> : null}
             {task.targetBranch ? <div><dt>目标分支</dt><dd>{task.targetBranch}</dd></div> : null}
             {task.developerName ? <div><dt>开发者</dt><dd>{task.developerName}</dd></div> : null}
+            {task.prUrl ? <div><dt>PR 链接</dt><dd><a href={task.prUrl} target="_blank" rel="noopener noreferrer">{task.prUrl}</a></dd></div> : null}
             <div><dt>创建时间</dt><dd>{new Date(task.createdAt).toLocaleString('zh-CN')}</dd></div>
             <div><dt>Review 状态</dt><dd><span className={`status-pill-task pill-${task.status}`}>{reviewTaskStatusLabels[task.status]}</span></dd></div>
           </dl>

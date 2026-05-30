@@ -270,6 +270,20 @@ describe('Review report detail page', () => {
     expect(screen.getByText('低置信度')).toBeInTheDocument();
     expect(screen.queryByText(/业务影响/)).not.toBeInTheDocument();
   });
+
+  it('displays PR link when prUrl is present', async () => {
+    const reportWithUrl: ReviewReport = {
+      ...mockReviewReport,
+      task: { ...mockReviewReport.task, prUrl: 'https://github.com/owner/repo/pull/1' },
+    };
+    renderAt('/reviews/task-001', completedClient(reportWithUrl) as never, 0);
+
+    await waitFor(() => expect(screen.getByText('PR 基本信息')).toBeInTheDocument());
+    const link = screen.getByText('https://github.com/owner/repo/pull/1');
+    expect(link.tagName).toBe('A');
+    expect(link).toHaveAttribute('href', 'https://github.com/owner/repo/pull/1');
+    expect(link).toHaveAttribute('target', '_blank');
+  });
 });
 
 describe('History records page', () => {
@@ -553,6 +567,9 @@ describe('PR fetch on new review page', () => {
     title: 'Fetched PR Title',
     description: 'Fetched PR description',
     diffContent: 'diff --git a/test.ts b/test.ts',
+    projectName: 'test-project',
+    targetBranch: 'feature/test',
+    developerName: 'Alice',
   };
 
   function prFetchClient(overrides: Partial<{
@@ -597,6 +614,9 @@ describe('PR fetch on new review page', () => {
     expect((screen.getByPlaceholderText('例如：优化用户登录逻辑') as HTMLInputElement).value).toBe('Fetched PR Title');
     expect(screen.getByDisplayValue('Fetched PR description')).toBeInTheDocument();
     expect(screen.getByDisplayValue('diff --git a/test.ts b/test.ts')).toBeInTheDocument();
+    expect((screen.getByPlaceholderText('例如：user-center') as HTMLInputElement).value).toBe('test-project');
+    expect((screen.getByPlaceholderText('例如：main') as HTMLInputElement).value).toBe('feature/test');
+    expect((screen.getByPlaceholderText('例如：Alice') as HTMLInputElement).value).toBe('Alice');
   });
 
   it('shows error on fetch failure', async () => {

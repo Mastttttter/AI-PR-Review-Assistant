@@ -13,6 +13,7 @@ export interface ReviewTask {
   projectName?: string | null;
   targetBranch?: string | null;
   developerName?: string | null;
+  prUrl?: string | null;
   status: ReviewTaskStatus;
   riskLevel?: RiskLevel | null;
   issueCount: number;
@@ -27,6 +28,7 @@ export interface CreateReviewTaskRequest {
   projectName?: string;
   targetBranch?: string;
   developerName?: string;
+  prUrl?: string;
   diffContent: string;
 }
 
@@ -172,4 +174,7 @@ export interface FetchPrResponse {
   title: string;
   description: string;
   diffContent: string;
+  projectName: string;
+  targetBranch: string;
+  developerName: string;
 }
