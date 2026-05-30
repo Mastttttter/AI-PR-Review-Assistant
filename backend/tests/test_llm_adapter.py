@@ -8,6 +8,7 @@ import pytest
 import respx
 from httpx import Response
 
+from apr_backend.core.config_loader import load_llm_config
 from apr_backend.core.settings import get_settings
 from apr_backend.services.llm_adapter import (
     LLMError,
@@ -498,6 +499,33 @@ class TestFactory:
 
 
 class TestFactoryConfigJson:
+    def test_system_prompt_from_config_json(self, monkeypatch, tmp_path) -> None:
+        config_path = tmp_path / "config.json"
+        monkeypatch.setattr("apr_backend.core.config_loader._CONFIG_PATH", config_path)
+        config_path.write_text(json.dumps({
+            "system_prompt": "Custom system prompt for testing.",
+            "mock_enabled": True,
+        }))
+        get_settings.cache_clear()
+        config = load_llm_config()
+        get_settings.cache_clear()
+        assert config["system_prompt"] == "Custom system prompt for testing."
+
+    def test_system_prompt_from_env_var(self, monkeypatch) -> None:
+        monkeypatch.setenv("APR_SYSTEM_PROMPT", "Env system prompt.")
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "true")
+        get_settings.cache_clear()
+        config = load_llm_config()
+        get_settings.cache_clear()
+        assert config["system_prompt"] == "Env system prompt."
+
+    def test_system_prompt_default_empty(self, monkeypatch) -> None:
+        monkeypatch.setenv("APR_LLM_API_KEY", "")
+        get_settings.cache_clear()
+        config = load_llm_config()
+        get_settings.cache_clear()
+        assert config["system_prompt"] == ""
+
     def test_uses_config_json_values_when_present(self, monkeypatch, tmp_path) -> None:
         config_path = tmp_path / "config.json"
         monkeypatch.setattr("apr_backend.core.config_loader._CONFIG_PATH", config_path)

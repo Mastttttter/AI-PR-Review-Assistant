@@ -11,8 +11,9 @@ from sqlalchemy.orm import Session, sessionmaker
 from apr_backend.core.settings import get_settings
 from apr_backend.db.enums import RiskLevel, RuleType, Severity, TaskStatus
 from apr_backend.db.models import ReviewRule, ReviewReport, ReviewTask
+from apr_backend.services.diff_parser import parse_diff
 from apr_backend.services.llm_adapter import LLMError, MockLLMProvider
-from apr_backend.services.orchestrator import run_review_orchestrator
+from apr_backend.services.orchestrator import _build_prompt, run_review_orchestrator
 
 MULTI_FILE_DIFF = """\
 diff --git a/src/auth.py b/src/auth.py
@@ -263,3 +264,40 @@ class TestRuleLoading:
         with db_session_factory() as session:
             reloaded = session.get(ReviewTask, task.id)
             assert reloaded.status == TaskStatus.completed
+
+
+class TestSystemPrompt:
+    def test_uses_custom_system_prompt_when_configured(self, db_session_factory, monkeypatch) -> None:
+        monkeypatch.setattr(
+            "apr_backend.services.orchestrator.load_llm_config",
+            lambda: {
+                "active_provider": "openai",
+                "mock_enabled": False,
+                "timeout": 60,
+                "system_prompt": "Custom system prompt for test.",
+                "openai": {"base_uri": "", "api_key": "sk-key", "model": ""},
+                "anthropic": {"base_uri": "", "api_key": None, "model": ""},
+            },
+        )
+        task = _create_task(db_session_factory)
+        parsed = parse_diff(task.diff_content)
+        prompt = _build_prompt(task, parsed, [], [])
+        assert "Custom system prompt for test." in prompt
+        assert "You are an AI PR Review assistant" not in prompt
+
+    def test_falls_back_to_default_when_system_prompt_empty(self, db_session_factory, monkeypatch) -> None:
+        monkeypatch.setattr(
+            "apr_backend.services.orchestrator.load_llm_config",
+            lambda: {
+                "active_provider": "openai",
+                "mock_enabled": False,
+                "timeout": 60,
+                "system_prompt": "",
+                "openai": {"base_uri": "", "api_key": "sk-key", "model": ""},
+                "anthropic": {"base_uri": "", "api_key": None, "model": ""},
+            },
+        )
+        task = _create_task(db_session_factory)
+        parsed = parse_diff(task.diff_content)
+        prompt = _build_prompt(task, parsed, [], [])
+        assert "You are an AI PR Review assistant" in prompt
