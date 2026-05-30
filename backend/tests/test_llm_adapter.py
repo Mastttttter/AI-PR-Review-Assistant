@@ -511,10 +511,11 @@ class TestFactoryConfigJson:
         get_settings.cache_clear()
         assert config["system_prompt"] == "Custom system prompt for testing."
 
-    def test_system_prompt_from_env_var(self, monkeypatch) -> None:
+    def test_system_prompt_from_env_var(self, monkeypatch, tmp_path) -> None:
         from types import SimpleNamespace
+        monkeypatch.setattr("apr_backend.core.config_loader._CONFIG_PATH", tmp_path / "nonexistent.json")
         monkeypatch.setattr(
-            "apr_backend.core.settings.get_settings",
+            "apr_backend.core.settings.Settings",
             lambda: SimpleNamespace(
                 llm_provider="openai", llm_mock_enabled=True, llm_timeout=60,
                 system_prompt="Env system prompt.",
@@ -528,10 +529,11 @@ class TestFactoryConfigJson:
         get_settings.cache_clear()
         assert config["system_prompt"] == "Env system prompt."
 
-    def test_system_prompt_default_empty(self, monkeypatch) -> None:
+    def test_system_prompt_default_empty(self, monkeypatch, tmp_path) -> None:
         from types import SimpleNamespace
+        monkeypatch.setattr("apr_backend.core.config_loader._CONFIG_PATH", tmp_path / "nonexistent.json")
         monkeypatch.setattr(
-            "apr_backend.core.settings.get_settings",
+            "apr_backend.core.settings.Settings",
             lambda: SimpleNamespace(
                 llm_provider="openai", llm_mock_enabled=True, llm_timeout=60,
                 system_prompt="",
