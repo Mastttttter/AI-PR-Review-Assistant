@@ -370,3 +370,17 @@ Delivered scope:
 Verification:
 
 - 312/312 tests pass (15 new PR fetch endpoint tests).
+
+## Extend PR Fetch Response + Add pr_url to Review Task Model
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- Part A: Extended `FetchPrResponse` in POST /api/pr-fetch with `project_name` (from `base.repo.full_name`), `target_branch` (from `base.ref`), and `developer_name` (from `user.login`). All fields default to `""` when GitHub API returns missing nested data.
+- Part B: Added `pr_url` column (String 2048, nullable) to `ReviewTask` model with Alembic migration `3134f36008b3_add_pr_url_to_review_tasks`. Updated `ReviewTaskCreate` schema, store on create, and return in `ReviewTaskDetailResponse`, `ReviewTaskListItem`, and `ReportTaskNested`.
+- Updated docs: `doc/chief/PRD.md` section 7.12, `doc/chief/tecDoc.md` PR fetch API section, `doc/backend/todolist.md`.
+
+Verification:
+
+- 317/317 tests pass (5 new: 2 PR fetch extended fields, 2 review task lifecycle pr_url, 1 report pr_url).
