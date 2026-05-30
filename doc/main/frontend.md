@@ -409,3 +409,23 @@ Delivered scope:
 Verification:
 
 - 65/65 tests pass (3 new SettingsPage tests, 2 updated API client tests); typecheck clean; build succeeds.
+
+## PR URI Auto-Fill
+
+Status: completed by frontend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- Added FetchPrRequest and FetchPrResponse types to types.ts.
+- Added fetchPrInfo(url) method to API client calling POST /api/pr-fetch.
+- Added PR URL input row with "获取" button above the NewReviewPage form grid.
+- On successful fetch, auto-populates prTitle, prDescription, and diffContent form fields.
+- Loading state shows "获取中..." with disabled button.
+- Error messages displayed inline for invalid URLs, non-existent PRs, and network failures.
+- User can edit auto-populated fields before submitting.
+- Styled with .pr-fetch-row, .pr-fetch-field, .pr-fetch-button, .pr-fetch-error classes.
+
+Verification:
+
+- 71/71 tests pass (6 new: 4 App + 2 apiClient); typecheck clean; build succeeds.
+- Browser validation: 8/8 acceptance criteria pass (UI layout, button states, valid URL fetch, edit after fetch, invalid URL error, non-existent PR error).
