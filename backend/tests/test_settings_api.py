@@ -60,6 +60,12 @@ class TestGetSettings:
         monkeypatch.setenv("APR_OPENAI_BASE_URI", "https://test.openai.com")
         monkeypatch.setenv("APR_OPENAI_MODEL", "test-model")
         monkeypatch.setenv("APR_OPENAI_API_KEY", "sk-abc123")
+        monkeypatch.setenv("APR_ANTHROPIC_BASE_URI", "https://api.anthropic.com")
+        monkeypatch.setenv("APR_ANTHROPIC_API_KEY", "")
+        monkeypatch.setenv("APR_ANTHROPIC_MODEL", "")
+        monkeypatch.setenv("APR_LLM_API_KEY", "")
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
+        monkeypatch.setenv("APR_LLM_PROVIDER", "openai")
         get_settings.cache_clear()
 
         response = client.get("/api/settings", headers=OWNER)
@@ -72,8 +78,14 @@ class TestGetSettings:
         assert body["mock_enabled"] is False
 
     def test_masks_api_keys(self, client, clean_config, tmp_path, monkeypatch) -> None:
+        monkeypatch.setenv("APR_OPENAI_BASE_URI", "https://api.openai.com/v1")
+        monkeypatch.setenv("APR_OPENAI_MODEL", "gpt-4o-mini")
         monkeypatch.setenv("APR_OPENAI_API_KEY", "sk-abcdefgh12345678")
+        monkeypatch.setenv("APR_ANTHROPIC_BASE_URI", "https://api.anthropic.com")
+        monkeypatch.setenv("APR_ANTHROPIC_MODEL", "claude-sonnet-4-6")
         monkeypatch.setenv("APR_ANTHROPIC_API_KEY", "sk-ant-short")
+        monkeypatch.setenv("APR_LLM_API_KEY", "")
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
         get_settings.cache_clear()
 
         response = client.get("/api/settings", headers=OWNER)
@@ -83,8 +95,14 @@ class TestGetSettings:
         assert body["anthropic"]["api_key"] == "***-hort"
 
     def test_masks_none_api_key(self, client, clean_config, tmp_path, monkeypatch) -> None:
+        monkeypatch.setenv("APR_OPENAI_BASE_URI", "https://api.openai.com/v1")
+        monkeypatch.setenv("APR_OPENAI_MODEL", "gpt-4o-mini")
         monkeypatch.setenv("APR_OPENAI_API_KEY", "")
+        monkeypatch.setenv("APR_ANTHROPIC_BASE_URI", "https://api.anthropic.com")
+        monkeypatch.setenv("APR_ANTHROPIC_MODEL", "claude-sonnet-4-6")
+        monkeypatch.setenv("APR_ANTHROPIC_API_KEY", "")
         monkeypatch.setenv("APR_LLM_API_KEY", "")
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
         get_settings.cache_clear()
 
         response = client.get("/api/settings", headers=OWNER)
