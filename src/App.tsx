@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { ApiRequestError, apiClient } from './api';
-import type { ApiClient, CreateReviewTaskRequest, FeedbackStatus, IssueSeverity, ReviewIssue, ReviewReport, ReviewRule, ReviewTask, ReviewTaskListQuery, ReviewTaskStatus, RiskLevel, RuleType, UpsertReviewRuleRequest } from './api';
+import type { ApiClient, CreateReviewTaskRequest, DashboardResponse, FeedbackStatus, IssueSeverity, ReviewIssue, ReviewReport, ReviewRule, ReviewTask, ReviewTaskListQuery, ReviewTaskStatus, RiskLevel, RuleType, UpsertReviewRuleRequest } from './api';
 import { confidenceLevelLabels, feedbackStatusLabels, issueSeverityLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels, ruleTypeLabels } from './api';
 
 const MAX_DIFF_LENGTH = 50_000;
@@ -11,7 +11,7 @@ const navigationItems = [
   { label: '新建 Review', path: '/reviews/new' },
   { label: '历史记录', path: '/history' },
   { label: '规则配置', path: '/rules' },
-  { label: '报告详情', path: '/reviews/demo-report' }
+
 ];
 
 type ReviewTaskApi = Pick<ApiClient, 'createReviewTask'>;
@@ -19,11 +19,12 @@ type ReportClientApi = Pick<ApiClient, 'getReviewTask' | 'getReviewReport'>;
 type HistoryClientApi = Pick<ApiClient, 'listReviewTasks'>;
 type RulesClientApi = Pick<ApiClient, 'listReviewRules' | 'createReviewRule' | 'updateReviewRule' | 'enableReviewRule' | 'disableReviewRule' | 'deleteReviewRule'>;
 type FeedbackClientApi = Pick<ApiClient, 'updateIssueFeedback'>;
+type DashboardClientApi = Pick<ApiClient, 'getDashboardMetrics'>;
 
 type FormErrors = Partial<Record<keyof CreateReviewTaskRequest | 'submit', string>>;
 
 type AppProps = {
-  client?: ReviewTaskApi & ReportClientApi & HistoryClientApi & RulesClientApi & FeedbackClientApi;
+  client?: ReviewTaskApi & ReportClientApi & HistoryClientApi & RulesClientApi & FeedbackClientApi & DashboardClientApi;
   pollIntervalMs?: number;
 };
 
@@ -75,14 +76,44 @@ function PageCard({ title, description, children }: { title: string; description
   );
 }
 
-function WorkbenchPage() {
+function WorkbenchPage({ client }: { client: DashboardClientApi }) {
+  const navigate = useNavigate();
+  const [metrics, setMetrics] = useState<DashboardResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(null);
+    client.getDashboardMetrics()
+      .then((data) => { if (active) { setMetrics(data); setLoading(false); } })
+      .catch((e) => {
+        if (active) {
+          setError(e instanceof ApiRequestError ? e.message : '加载工作台数据失败，请稍后重试。');
+          setLoading(false);
+        }
+      });
+    return () => { active = false; };
+  }, [client]);
+
   return (
     <PageCard title="首页 / 工作台" description="集中展示新建入口、最近任务、风险提醒和问题统计，为审查闭环提供清晰起点。">
-      <div className="metric-grid">
-        <div><strong>3</strong><span>待关注 Review</span></div>
-        <div><strong>1</strong><span>高风险任务</span></div>
-        <div><strong>12</strong><span>本周问题</span></div>
+      <div className="workbench-cta">
+        <button type="button" className="primary-button" onClick={() => navigate('/reviews/new')}>新建 Review</button>
       </div>
+      {loading ? <LoadingShell label="加载工作台数据..." /> : null}
+      {error ? <ErrorShell message={error} /> : null}
+      {metrics ? (
+        <div className="metric-grid">
+          <div><strong>{metrics.totalTasks}</strong><span>总任务</span></div>
+          <div><strong>{metrics.totalIssues}</strong><span>总问题数</span></div>
+          <div><strong>{metrics.tasksLast30Days}</strong><span>近 30 天任务</span></div>
+          <div className="stat-high"><strong>{metrics.riskDistribution.high ?? 0}</strong><span>高风险任务</span></div>
+          <div className="stat-medium"><strong>{metrics.riskDistribution.medium ?? 0}</strong><span>中风险任务</span></div>
+          <div className="stat-low"><strong>{metrics.riskDistribution.low ?? 0}</strong><span>低风险任务</span></div>
+        </div>
+      ) : null}
     </PageCard>
   );
 }
@@ -846,7 +877,7 @@ export function App({ client = apiClient, pollIntervalMs }: AppProps) {
   return (
     <Shell>
       <Routes>
-        <Route path="/" element={<WorkbenchPage />} />
+        <Route path="/" element={<WorkbenchPage client={client} />} />
         <Route path="/reviews/new" element={<NewReviewPage client={client} />} />
         <Route path="/history" element={<HistoryPage client={client} />} />
         <Route path="/rules" element={<RulesPage client={client} />} />

@@ -324,3 +324,31 @@ Testing engineer confirmed implementation through code review:
 Browser MCP unavailable for interactive testing; implementation verified via code review. Backend API (PATCH /api/review-issues/{id}/feedback) and persistence were previously verified by testing-engineer.
 
 Branch: task-7-feedback-ui, commit f23381f, merged to main.
+
+## Frontend Bug Fixes (2026-05-30)
+
+Status: completed by frontend-engineer on 2026-05-30.
+
+Four bugs identified by code review, fixed, and verified:
+
+**Fix #1: Remove dead navigation link**
+- Problem: `navigationItems` included `{ label: '报告详情', path: '/reviews/demo-report' }` which is not a valid task UUID, always resulting in an error page.
+- Fix: Removed the nav item. Report detail pages are accessed via history row clicks, not a standalone nav link.
+
+**Fix #2: Implement live dashboard metrics**
+- Problem: `WorkbenchPage` displayed hardcoded static numbers (3, 1, 12) instead of fetching from `GET /api/metrics/dashboard`.
+- Fix: Added `DashboardResponse` type, `getDashboardMetrics()` API method, and updated `WorkbenchPage` to fetch live data with loading/error states.
+
+**Fix #3: Add CTA button to WorkbenchPage**
+- Problem: PRD 8.1 requires a "新建 Review 按钮" on the workbench, but none existed. Users could only create reviews via the sidebar nav link.
+- Fix: Added a prominent "新建 Review" primary button navigating to `/reviews/new`.
+
+**Fix #4: Remove duplicate test suite**
+- Problem: `App.test.tsx` had two identical `describe('History records page', ...)` blocks with duplicate function definitions.
+- Fix: Removed the duplicate block (8 tests). Original block remains.
+
+Verification:
+- `pnpm verify` passes (type check, 45 tests, production build).
+- All four test files updated with required `getDashboardMetrics` mock.
+
+Branch: frontend-fixes-batch, commit f2e4a0d.

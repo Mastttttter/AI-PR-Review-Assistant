@@ -1,6 +1,7 @@
 import type {
   CreateReviewTaskRequest,
   CreateReviewTaskResponse,
+  DashboardResponse,
   FeedbackRequest,
   FeedbackResponse,
   ReviewReport,
@@ -155,6 +156,10 @@ export class ApiClient {
 
   async deleteReviewRule(ruleId: string): Promise<void> {
     await this.request<void>(`/review-rules/${encodeURIComponent(ruleId)}`, { method: 'DELETE' });
+  }
+
+  async getDashboardMetrics(): Promise<DashboardResponse> {
+    return this.request<DashboardResponse>('/metrics/dashboard');
   }
 
   async updateIssueFeedback(issueId: string, request: FeedbackRequest): Promise<FeedbackResponse> {

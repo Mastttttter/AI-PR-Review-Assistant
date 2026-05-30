@@ -127,3 +127,13 @@ export interface FeedbackResponse {
   comment?: string | null;
   updatedAt: string;
 }
+
+export interface DashboardResponse {
+  totalTasks: number;
+  tasksLast30Days: number;
+  totalIssues: number;
+  riskDistribution: Record<string, number>;
+  usefulRate: number;
+  falsePositiveRate: number;
+  adoptionRate: number;
+}
