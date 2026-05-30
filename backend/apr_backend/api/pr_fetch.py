@@ -29,6 +29,9 @@ class FetchPrResponse(BaseModel):
     title: str
     description: str
     diff_content: str
+    project_name: str = ""
+    target_branch: str = ""
+    developer_name: str = ""
 
 
 @router.post("")
@@ -40,17 +43,20 @@ def fetch_pr(payload: FetchPrRequest, demo_owner: DemoOwnerHeader) -> FetchPrRes
     owner, repo, pull_number = match.group(1), match.group(2), match.group(3)
     api_url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pull_number}"
 
-    title, description = _fetch_pr_metadata(api_url)
+    title, description, project_name, target_branch, developer_name = _fetch_pr_metadata(api_url)
     diff_content = _fetch_pr_diff(api_url)
 
     return FetchPrResponse(
         title=title,
         description=description,
         diff_content=diff_content[:DIFF_CAP] if len(diff_content) > DIFF_CAP else diff_content,
+        project_name=project_name,
+        target_branch=target_branch,
+        developer_name=developer_name,
     )
 
 
-def _fetch_pr_metadata(api_url: str) -> tuple[str, str]:
+def _fetch_pr_metadata(api_url: str) -> tuple[str, str, str, str, str]:
     try:
         response = httpx.get(api_url, headers=GITHUB_API_HEADERS, timeout=httpx.Timeout(15))
     except httpx.TimeoutException:
@@ -68,7 +74,14 @@ def _fetch_pr_metadata(api_url: str) -> tuple[str, str]:
         raise _http_exception(502, f"GitHub API returned status {response.status_code}")
 
     data = response.json()
-    return data.get("title", ""), data.get("body") or ""
+    base = data.get("base", {}) or {}
+    return (
+        data.get("title", ""),
+        data.get("body") or "",
+        base.get("repo", {}).get("full_name", ""),
+        base.get("ref", ""),
+        data.get("user", {}).get("login", ""),
+    )
 
 
 def _fetch_pr_diff(api_url: str) -> str:

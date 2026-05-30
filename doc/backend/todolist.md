@@ -182,3 +182,10 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Tests: 312/312 passing (15 new PR fetch endpoint tests).
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-30
+
+- [x] Extend PR fetch response + add pr_url to review task model
+  - Scope: Part A: Extend FetchPrResponse with project_name, target_branch, developer_name extracted from GitHub API base/repo/full_name, base/ref, user/login. Part B: Add pr_url column (String 2048) to ReviewTask model, Alembic migration, CreateReviewTaskRequest schema, store on create, return in detail/list/report responses.
+  - Acceptance: PR fetch returns project/target_branch/developer; task create accepts pr_url and returns it in detail, list, and report responses; null when not provided.
+  - Tests: 317/317 passing (5 new: 2 PR fetch, 2 review task lifecycle, 1 report).
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-30

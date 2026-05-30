@@ -22,7 +22,12 @@ def _github_mock(title="Fix login bug", body="Fixed the race condition.", diff="
             if diff_status >= 400:
                 return Response(diff_status)
             return Response(200, content=diff)
-        return Response(200, json={"title": title, "body": body})
+        return Response(200, json={
+            "title": title,
+            "body": body,
+            "base": {"ref": "main", "repo": {"full_name": "octocat/hello-world"}},
+            "user": {"login": "octocat"},
+        })
 
     return handler
 
@@ -51,6 +56,9 @@ class TestPrFetchSuccess:
         assert body["title"] == "Fix login bug"
         assert body["description"] == "Fixed the race condition."
         assert "diff --git" in body["diff_content"]
+        assert body["project_name"] == "octocat/hello-world"
+        assert body["target_branch"] == "main"
+        assert body["developer_name"] == "octocat"
 
     def test_handles_url_with_trailing_path(self, client):
         with respx.mock as route:
@@ -96,6 +104,36 @@ class TestPrFetchSuccess:
 
         assert response.status_code == 200
         assert len(response.json()["diff_content"]) == 50_000
+
+    def test_missing_base_user_fields_default_to_empty(self, client):
+        with respx.mock as route:
+            route.get(API_URL).mock(side_effect=_github_mock(title="T", body="B", diff="d"))
+
+            response = client.post("/api/pr-fetch", json={"url": VALID_URL}, headers=OWNER)
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["project_name"] == "octocat/hello-world"
+        assert body["target_branch"] == "main"
+        assert body["developer_name"] == "octocat"
+
+    def test_empty_base_user_when_github_returns_minimal(self, client):
+        def minimal_handler(request):
+            accept = request.headers.get("Accept", "")
+            if "diff" in accept:
+                return Response(200, content="d")
+            return Response(200, json={"title": "Minimal", "body": None})
+
+        with respx.mock as route:
+            route.get(API_URL).mock(side_effect=minimal_handler)
+
+            response = client.post("/api/pr-fetch", json={"url": VALID_URL}, headers=OWNER)
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["project_name"] == ""
+        assert body["target_branch"] == ""
+        assert body["developer_name"] == ""
 
 
 class TestPrFetchErrors:

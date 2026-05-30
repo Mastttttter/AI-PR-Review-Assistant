@@ -228,6 +228,28 @@ class TestCompletedReport:
         assert body["id"] is not None
         assert body["created_at"] is not None
 
+    def test_report_includes_pr_url(self, client, session_factory) -> None:
+        url = "https://github.com/octocat/hello-world/pull/42"
+        with session_factory() as session:
+            task = ReviewTask(
+                pr_title="PR URL test", pr_description="With URL", pr_url=url,
+                project_name="test", demo_owner="owner-a", diff_content="diff",
+                status=TaskStatus.completed, risk_level=RiskLevel.low, issue_count=0,
+            )
+            session.add(task)
+            session.flush()
+            report = ReviewReport(
+                task_id=task.id, summary="{}", risk_level=RiskLevel.low, risk_reasons=[],
+                issue_stats={},
+            )
+            session.add(report)
+            session.commit()
+            tid = task.id
+
+        response = client.get(f"/api/review-tasks/{tid}/report", headers=OWNER)
+        assert response.status_code == 200
+        assert response.json()["task"]["pr_url"] == url
+
 
 class TestPendingTask:
     def test_pending_task_returns_null_summary(self, client, session_factory) -> None:

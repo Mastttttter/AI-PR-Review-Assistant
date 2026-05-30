@@ -238,3 +238,35 @@ def test_rerun_rejects_deleted_task(client, session_factory, enqueued_jobs) -> N
 
     assert response.status_code == 404
     assert enqueued_jobs == []
+
+
+def test_create_task_with_pr_url_stores_and_returns(client, session_factory) -> None:
+    response = client.post("/api/review-tasks", json=create_payload(
+        pr_url="https://github.com/octocat/hello-world/pull/42",
+    ), headers=OWNER_HEADER)
+
+    assert response.status_code == 201
+    task_id = response.json()["task_id"]
+
+    detail = client.get(f"/api/review-tasks/{task_id}", headers=OWNER_HEADER)
+    assert detail.status_code == 200
+    assert detail.json()["pr_url"] == "https://github.com/octocat/hello-world/pull/42"
+
+    list_resp = client.get("/api/review-tasks", headers=OWNER_HEADER)
+    assert list_resp.status_code == 200
+    assert list_resp.json()[0]["pr_url"] == "https://github.com/octocat/hello-world/pull/42"
+
+
+def test_create_task_without_pr_url_returns_null(client) -> None:
+    response = client.post("/api/review-tasks", json=create_payload(), headers=OWNER_HEADER)
+
+    assert response.status_code == 201
+    task_id = response.json()["task_id"]
+
+    detail = client.get(f"/api/review-tasks/{task_id}", headers=OWNER_HEADER)
+    assert detail.status_code == 200
+    assert detail.json()["pr_url"] is None
+
+    list_resp = client.get("/api/review-tasks", headers=OWNER_HEADER)
+    assert list_resp.status_code == 200
+    assert list_resp.json()[0]["pr_url"] is None
