@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { App } from '../App';
-import type { CreateReviewTaskRequest, CreateReviewTaskResponse, ReviewReport, ReviewTask, ReviewTaskListQuery } from '../api';
+import type { CreateReviewTaskRequest, CreateReviewTaskResponse, DashboardResponse, ReviewReport, ReviewTask, ReviewTaskListQuery } from '../api';
 
 function neverPoll(_id: string): Promise<ReviewTask> {
   throw new Error('polling should not be triggered from this test');
@@ -34,6 +34,7 @@ function renderForm(createReviewTask = vi.fn<(_: CreateReviewTaskRequest) => Pro
     disableReviewRule: neverRuleMutation,
     deleteReviewRule: neverRuleMutation,
     updateIssueFeedback: neverRuleMutation,
+    getDashboardMetrics: async (): Promise<DashboardResponse> => ({ totalTasks: 0, tasksLast30Days: 0, totalIssues: 0, riskDistribution: { high: 0, medium: 0, low: 0 }, usefulRate: 0, falsePositiveRate: 0, adoptionRate: 0 }),
   };
   render(
     <MemoryRouter initialEntries={['/reviews/new']}>

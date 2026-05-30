@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { App } from '../App';
 import { ApiRequestError } from '../api';
-import type { FeedbackResponse, ReviewReport, ReviewTask, ReviewTaskListQuery } from '../api';
+import type { DashboardResponse, FeedbackResponse, ReviewReport, ReviewTask, ReviewTaskListQuery } from '../api';
 import { mockReviewReport, mockReviewTask } from '../test-fixtures/mockReview';
 
 function neverCalled(): Promise<never> {
@@ -51,6 +51,7 @@ function createFeedbackClient(overrides: Partial<{
     disableReviewRule: neverRuleMutation,
     deleteReviewRule: neverRuleMutation,
     updateIssueFeedback,
+    getDashboardMetrics: async (): Promise<DashboardResponse> => ({ totalTasks: 0, tasksLast30Days: 0, totalIssues: 0, riskDistribution: { high: 0, medium: 0, low: 0 }, usefulRate: 0, falsePositiveRate: 0, adoptionRate: 0 }),
   };
 }
 
