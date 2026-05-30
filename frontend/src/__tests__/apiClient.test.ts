@@ -134,6 +134,7 @@ describe('ApiClient', () => {
       anthropic: { base_uri: 'https://api.anthropic.com', api_key: 'sk-ant-xyz', model: 'claude-3-opus' },
       active_provider: 'openai',
       mock_enabled: true,
+      system_prompt: '自定义提示',
     }));
     const client = new ApiClient({ fetcher });
 
@@ -145,6 +146,7 @@ describe('ApiClient', () => {
     expect(settings.anthropic.apiKey).toBe('sk-ant-xyz');
     expect(settings.activeProvider).toBe('openai');
     expect(settings.mockEnabled).toBe(true);
+    expect(settings.systemPrompt).toBe('自定义提示');
   });
 
   it('serializes updateSettings with snake_case keys', async () => {
@@ -161,6 +163,7 @@ describe('ApiClient', () => {
       anthropic: { baseUri: 'https://api.anthropic.com', apiKey: 'sk-ant-xyz', model: 'claude-3-opus' },
       activeProvider: 'openai',
       mockEnabled: true,
+      systemPrompt: '自定义提示',
     };
     await client.updateSettings(payload);
 
@@ -171,6 +174,7 @@ describe('ApiClient', () => {
         anthropic: { base_uri: 'https://api.anthropic.com', api_key: 'sk-ant-xyz', model: 'claude-3-opus' },
         active_provider: 'openai',
         mock_enabled: true,
+        system_prompt: '自定义提示',
       }),
     }));
   });

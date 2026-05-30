@@ -880,6 +880,7 @@ function SettingsPage({ client }: { client: SettingsClientApi }) {
 
   const [mockEnabled, setMockEnabled] = useState(true);
   const [activeProvider, setActiveProvider] = useState('openai');
+  const [systemPrompt, setSystemPrompt] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -890,6 +891,7 @@ function SettingsPage({ client }: { client: SettingsClientApi }) {
         if (active) {
           setOpenai(data.openai); setAnthropic(data.anthropic);
           setMockEnabled(data.mockEnabled); setActiveProvider(data.activeProvider);
+          setSystemPrompt(data.systemPrompt ?? '');
           setLoading(false);
         }
       })
@@ -911,6 +913,7 @@ function SettingsPage({ client }: { client: SettingsClientApi }) {
       anthropic: { ...anthropic, apiKey: isMasked(anthropic.apiKey) ? '' : anthropic.apiKey },
       activeProvider,
       mockEnabled,
+      systemPrompt,
     };
     try {
       await client.updateSettings(safePayload);
@@ -1084,6 +1087,18 @@ function SettingsPage({ client }: { client: SettingsClientApi }) {
                   </div>
                 </div>
               ) : null}
+            </section>
+
+            <section className="settings-prompt-section">
+              <label className="form-field">
+                <span>系统提示词（自定义）</span>
+                <textarea
+                  value={systemPrompt}
+                  onChange={(e) => { setSystemPrompt(e.target.value); setSaved(false); }}
+                  rows={6}
+                  placeholder="留空使用默认提示词"
+                />
+              </label>
             </section>
 
             {renderProviderSection('OpenAI', 'openai', openai, testingOpenai, testOpenaiResult, revealOpenaiKey, setRevealOpenaiKey)}

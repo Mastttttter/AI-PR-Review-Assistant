@@ -354,6 +354,7 @@ describe('Settings page', () => {
     anthropic: { baseUri: 'https://api.anthropic.com', apiKey: '***-83ab', model: 'claude-3-opus' },
     activeProvider: 'openai',
     mockEnabled: true,
+    systemPrompt: '',
   };
 
   function settingsClient(overrides: Partial<{
@@ -425,6 +426,7 @@ describe('Settings page', () => {
       anthropic: { baseUri: 'https://api.anthropic.com', apiKey: '', model: 'claude-3-opus' },
       activeProvider: 'openai',
       mockEnabled: true,
+      systemPrompt: '',
     }));
     expect(screen.getByText('已保存')).toBeInTheDocument();
   });
@@ -510,6 +512,39 @@ describe('Settings page', () => {
     expect((buttons[0] as HTMLButtonElement).disabled).toBe(true);
     expect((buttons[1] as HTMLButtonElement).disabled).toBe(true);
     expect((buttons[0] as HTMLButtonElement).title).toBe('Mock 模式下不可测试连接');
+  });
+
+  it('renders system prompt textarea', async () => {
+    renderAt('/settings', settingsClient());
+    await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
+    const textarea = screen.getByPlaceholderText('留空使用默认提示词');
+    expect(textarea).toBeInTheDocument();
+    expect(textarea.tagName).toBe('TEXTAREA');
+    expect((textarea as HTMLTextAreaElement).value).toBe('');
+  });
+
+  it('binds system prompt value to textarea', async () => {
+    const promptSettings = { ...mockSettings, systemPrompt: '自定义提示词内容' };
+    renderAt('/settings', settingsClient({ getSettings: async () => promptSettings }));
+    await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
+    const textarea = screen.getByPlaceholderText('留空使用默认提示词') as HTMLTextAreaElement;
+    expect(textarea.value).toBe('自定义提示词内容');
+  });
+
+  it('includes systemPrompt in save payload', async () => {
+    const updateSettings = vi.fn(async (req: SettingsResponse) => req);
+    const promptSettings = { ...mockSettings, systemPrompt: '修改后的提示词' };
+    renderAt('/settings', settingsClient({ getSettings: async () => promptSettings, updateSettings }));
+    await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
+
+    const textarea = screen.getByPlaceholderText('留空使用默认提示词');
+    await userEvent.clear(textarea);
+    await userEvent.type(textarea, '新提示词');
+
+    await userEvent.click(screen.getByText('保存配置'));
+    await waitFor(() => expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({
+      systemPrompt: '新提示词',
+    })));
   });
 });
 

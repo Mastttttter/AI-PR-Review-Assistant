@@ -149,6 +149,7 @@ export interface SettingsResponse {
   anthropic: ProviderConfig;
   activeProvider: string;
   mockEnabled: boolean;
+  systemPrompt: string;
 }
 
 export interface TestConnectionRequest {
