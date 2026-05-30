@@ -1000,3 +1000,18 @@ h3 { font-size: clamp(2.2rem, 5vw, 5.2rem); }
   font-weight: 600;
   color: #ffd3c8;
 }
+
+.settings-prompt-section {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.settings-prompt-section textarea {
+  min-height: 8rem;
+  resize: vertical;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}

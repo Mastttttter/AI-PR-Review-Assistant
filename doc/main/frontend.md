@@ -394,3 +394,18 @@ Verification:
 - Browser-based verification by testing engineer confirmed: save/load works, masked keys handled correctly, test connectivity returns inline results.
 
 Branch: feat/frontend-settings-page
+
+## System Prompt Textarea in Settings Page
+
+Status: completed by frontend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- Added systemPrompt field to SettingsResponse type.
+- Wired systemPrompt through getSettings/updateSettings API client methods.
+- Added multi-line textarea in SettingsPage below mode/provider toggles with label "系统提示词（自定义）" and placeholder "留空使用默认提示词".
+- Applied monospace font and matching border style.
+
+Verification:
+
+- 65/65 tests pass (3 new SettingsPage tests, 2 updated API client tests); typecheck clean; build succeeds.
