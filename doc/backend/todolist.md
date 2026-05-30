@@ -136,3 +136,19 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Tests: 173/173 passing.
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-30
+
+## Assistant settings feature
+
+- [x] Add settings API with config persistence, env detection, and connectivity test
+  - Scope: Implement GET /api/settings (returns merged env + config.json), PUT /api/settings (writes config.json to backend/config/), POST /api/settings/test (validates provider connectivity with a lightweight API call). Auto-detect env vars: APR_OPENAI_BASE_URI, APR_OPENAI_API_KEY, APR_OPENAI_MODEL, APR_ANTHROPIC_BASE_URI, APR_ANTHROPIC_API_KEY, APR_ANTHROPIC_MODEL. Config file stored at backend/config/config.json, directory auto-created on first save.
+  - Acceptance: GET returns current config with env var defaults on fresh start; PUT persists to config.json and returns saved config; POST test sends a minimal API call to the provider and returns success/failure with reason. API keys are partially masked in GET response (show only last 4 chars). Priority: config.json values override env vars.
+  - Tests: 14/14 API tests passing. 273 total suite passes.
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-30
+
+- [x] Update LLM provider factory to read config.json with env var fallback
+  - Scope: Extract shared config loading into core/config_loader.py. Update create_llm_provider() to merge config.json > provider env vars > legacy APR_LLM_* defaults. Support active_provider field in config.json for provider selection. Unknown providers default to openai. MockLLM bypasses when mock_enabled.
+  - Acceptance: config.json values override env vars; env vars override legacy defaults; missing/malformed config.json degrades gracefully; mock bypass respected.
+  - Tests: 7 new factory integration tests. 280 total suite passes.
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-30

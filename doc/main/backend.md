@@ -287,3 +287,26 @@ Verification Results:
 6. All enum values valid (risk level, severity, issue type)
 
 Backend orchestrator, LLM adapter, and validator all functioning correctly.
+
+## Assistant Settings API with Config Persistence
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- `GET /api/settings` returns merged config from config.json + env vars with masked API keys (only last 4 characters shown).
+- `PUT /api/settings` writes provider config to `backend/config/config.json`, auto-creating the directory.
+- `POST /api/settings/test` validates provider connectivity with a minimal API call, returning success/failure with reason.
+- Config loader module (`core/config_loader.py`) with shared `load_llm_config()` implementing the priority chain: config.json values override provider-specific env vars (APR_OPENAI_*/APR_ANTHROPIC_*), which override legacy APR_LLM_* defaults.
+- Six new Settings fields: `openai_base_uri`, `openai_api_key`, `openai_model`, `anthropic_base_uri`, `anthropic_api_key`, `anthropic_model`.
+- LLM factory (`create_llm_provider`) updated to use `load_llm_config()` for provider selection and configuration, with unknown-provider normalization to openai.
+
+Bug fixes applied during testing:
+
+- PUT endpoint preserves existing real API key when receiving masked placeholder values (starts with `***-`) or empty strings, preventing accidental overwrite.
+- POST /test endpoint resolves stored API key from config when no key is provided or a masked placeholder is sent.
+
+Verification:
+
+- 286 tests pass (20 settings API tests, 7 config loader factory tests, 259 prior tests).
+- Settings tests cover: env var defaults, masked keys, config.json persistence, update, override priority, connectivity success/failure/timeout/invalid-key/403/server-error, put-preserves-key (masked, empty, real), test-uses-stored-key (missing, direct, none-configured).
