@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { App } from '../App';
 import { ApiRequestError } from '../api';
-import type { DashboardResponse, ReviewReport, ReviewTask, ReviewTaskListQuery, SettingsResponse } from '../api';
+import type { DashboardResponse, FetchPrResponse, ReviewReport, ReviewTask, ReviewTaskListQuery, SettingsResponse } from '../api';
 import { emptyReport, minimalReport, mockReviewReport, mockReviewTask, mockTaskList } from '../test-fixtures/mockReview';
 
 async function neverCalled(): Promise<never> {
@@ -47,7 +47,7 @@ async function emptyDashboard(): Promise<DashboardResponse> {
   };
 }
 
-function renderAt(path: string, client: Record<string, unknown> = { createReviewTask: neverCalled, getReviewTask: neverCalled, getReviewReport: neverCalled, listReviewTasks: neverTasks, listReviewRules: emptyRules, createReviewRule: neverRuleMutation, updateReviewRule: neverRuleMutation, enableReviewRule: neverRuleMutation, disableReviewRule: neverRuleMutation, deleteReviewRule: neverRuleMutation, updateIssueFeedback: neverFeedback, getDashboardMetrics: emptyDashboard, getSettings: neverSettings, updateSettings: neverSettings, testSettingsConnection: neverSettings }, pollIntervalMs?: number) {
+function renderAt(path: string, client: Record<string, unknown> = { createReviewTask: neverCalled, fetchPrInfo: neverCalled, getReviewTask: neverCalled, getReviewReport: neverCalled, listReviewTasks: neverTasks, listReviewRules: emptyRules, createReviewRule: neverRuleMutation, updateReviewRule: neverRuleMutation, enableReviewRule: neverRuleMutation, disableReviewRule: neverRuleMutation, deleteReviewRule: neverRuleMutation, updateIssueFeedback: neverFeedback, getDashboardMetrics: emptyDashboard, getSettings: neverSettings, updateSettings: neverSettings, testSettingsConnection: neverSettings }, pollIntervalMs?: number) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <App client={client as never} pollIntervalMs={pollIntervalMs} />
@@ -545,6 +545,86 @@ describe('Settings page', () => {
     await waitFor(() => expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({
       systemPrompt: '新提示词',
     })));
+  });
+});
+
+describe('PR fetch on new review page', () => {
+  const mockFetchResponse: FetchPrResponse = {
+    title: 'Fetched PR Title',
+    description: 'Fetched PR description',
+    diffContent: 'diff --git a/test.ts b/test.ts',
+  };
+
+  function prFetchClient(overrides: Partial<{
+    createReviewTask: () => Promise<{ taskId: string; status: string }>;
+    fetchPrInfo: (url: string) => Promise<FetchPrResponse>;
+  }> = {}) {
+    return {
+      createReviewTask: overrides.createReviewTask ?? (async () => { throw new Error('should not be called'); }),
+      fetchPrInfo: overrides.fetchPrInfo ?? (async () => mockFetchResponse),
+      getReviewTask: async () => { throw new Error('should not be called'); },
+      getReviewReport: async () => { throw new Error('should not be called'); },
+      listReviewTasks: async () => [],
+      listReviewRules: async () => [],
+      createReviewRule: async () => { throw new Error('should not be called'); },
+      updateReviewRule: async () => { throw new Error('should not be called'); },
+      enableReviewRule: async () => { throw new Error('should not be called'); },
+      disableReviewRule: async () => { throw new Error('should not be called'); },
+      deleteReviewRule: async () => { throw new Error('should not be called'); },
+      updateIssueFeedback: async () => { throw new Error('should not be called'); },
+      getDashboardMetrics: async () => ({ totalTasks: 0, tasksLast30Days: 0, totalIssues: 0, riskDistribution: { high: 0, medium: 0, low: 0 }, usefulRate: 0, falsePositiveRate: 0, adoptionRate: 0 }),
+      getSettings: async () => { throw new Error('should not be called'); },
+      updateSettings: async () => { throw new Error('should not be called'); },
+      testSettingsConnection: async () => { throw new Error('should not be called'); },
+    };
+  }
+
+  it('renders URL input and fetch button', async () => {
+    renderAt('/reviews/new', prFetchClient());
+    expect(screen.getByPlaceholderText(/粘贴 GitHub PR URL/)).toBeInTheDocument();
+    expect(screen.getByText('获取')).toBeInTheDocument();
+  });
+
+  it('populates form fields on successful fetch', async () => {
+    const fetchPrInfo = vi.fn(async () => mockFetchResponse);
+    renderAt('/reviews/new', prFetchClient({ fetchPrInfo }));
+
+    const urlInput = screen.getByPlaceholderText(/粘贴 GitHub PR URL/);
+    await userEvent.type(urlInput, 'https://github.com/owner/repo/pull/1');
+    await userEvent.click(screen.getByText('获取'));
+
+    await waitFor(() => expect(fetchPrInfo).toHaveBeenCalledWith('https://github.com/owner/repo/pull/1'));
+    expect((screen.getByPlaceholderText('例如：优化用户登录逻辑') as HTMLInputElement).value).toBe('Fetched PR Title');
+    expect(screen.getByDisplayValue('Fetched PR description')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('diff --git a/test.ts b/test.ts')).toBeInTheDocument();
+  });
+
+  it('shows error on fetch failure', async () => {
+    const fetchPrInfo = vi.fn(async () => { throw new ApiRequestError('获取 PR 信息失败', 400); });
+    renderAt('/reviews/new', prFetchClient({ fetchPrInfo }));
+
+    const urlInput = screen.getByPlaceholderText(/粘贴 GitHub PR URL/);
+    await userEvent.type(urlInput, 'https://github.com/owner/repo/pull/1');
+    await userEvent.click(screen.getByText('获取'));
+
+    await waitFor(() => expect(screen.getByText('获取 PR 信息失败')).toBeInTheDocument());
+  });
+
+  it('disables fetch button while loading', async () => {
+    let resolve: (value: FetchPrResponse) => void;
+    const fetchPrInfo = vi.fn(() => new Promise<FetchPrResponse>((r) => { resolve = r; }));
+    renderAt('/reviews/new', prFetchClient({ fetchPrInfo }));
+
+    const urlInput = screen.getByPlaceholderText(/粘贴 GitHub PR URL/);
+    await userEvent.type(urlInput, 'https://github.com/owner/repo/pull/1');
+    await userEvent.click(screen.getByText('获取'));
+
+    expect(screen.getByText('获取中...')).toBeInTheDocument();
+    const button = screen.getByText('获取中...') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+
+    resolve!(mockFetchResponse);
+    await waitFor(() => expect(screen.getByText('获取')).toBeInTheDocument());
   });
 });
 

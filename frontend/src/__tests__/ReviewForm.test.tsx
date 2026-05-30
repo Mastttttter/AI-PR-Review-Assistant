@@ -28,6 +28,7 @@ function neverSettings(): Promise<never> {
 function renderForm(createReviewTask = vi.fn<(_: CreateReviewTaskRequest) => Promise<CreateReviewTaskResponse>>()) {
   const client = {
     createReviewTask,
+    fetchPrInfo: async () => { throw new Error('should not be called'); },
     getReviewTask: neverPoll,
     getReviewReport: neverReport,
     listReviewTasks: neverTasks,

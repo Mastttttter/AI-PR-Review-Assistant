@@ -45,6 +45,7 @@ function createFeedbackClient(overrides: Partial<{
 
   return {
     createReviewTask: neverCalled,
+    fetchPrInfo: neverCalled,
     getReviewTask,
     getReviewReport,
     listReviewTasks: neverTasks,

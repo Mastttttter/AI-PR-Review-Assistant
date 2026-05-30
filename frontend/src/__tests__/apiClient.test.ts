@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiClient, ApiRequestError, feedbackStatusLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels } from '../api';
-import type { SettingsResponse } from '../api';
+import type { FetchPrResponse, SettingsResponse } from '../api';
 import { mockReviewReport, mockReviewRule } from '../test-fixtures/mockReview';
 
 function jsonResponse(payload: unknown, init: ResponseInit = {}) {
@@ -210,6 +210,34 @@ describe('ApiClient', () => {
       name: 'ApiRequestError',
       status: 500,
       message: '配置加载失败',
+    } satisfies Partial<ApiRequestError>);
+  });
+
+  it('fetches PR info and returns deserialized response', async () => {
+    const fetcher = vi.fn(async () => jsonResponse({
+      title: 'PR Title',
+      description: 'PR Desc',
+      diff_content: 'diff --git a/file.ts b/file.ts',
+    }));
+    const client = new ApiClient({ baseUrl: '/api', fetcher });
+
+    const result = await client.fetchPrInfo('https://github.com/owner/repo/pull/1');
+
+    expect(result).toEqual({ title: 'PR Title', description: 'PR Desc', diffContent: 'diff --git a/file.ts b/file.ts' } satisfies FetchPrResponse);
+    expect(fetcher).toHaveBeenCalledWith('/api/pr-fetch', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ url: 'https://github.com/owner/repo/pull/1' }),
+    }));
+  });
+
+  it('handles PR fetch error', async () => {
+    const fetcher = vi.fn(async () => jsonResponse({ detail: 'PR 不存在' }, { status: 404 }));
+    const client = new ApiClient({ fetcher });
+
+    await expect(client.fetchPrInfo('https://github.com/a/b/pull/99')).rejects.toMatchObject({
+      name: 'ApiRequestError',
+      status: 404,
+      message: 'PR 不存在',
     } satisfies Partial<ApiRequestError>);
   });
 });

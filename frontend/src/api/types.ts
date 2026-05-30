@@ -163,3 +163,13 @@ export interface TestConnectionResponse {
   success: boolean;
   message: string;
 }
+
+export interface FetchPrRequest {
+  url: string;
+}
+
+export interface FetchPrResponse {
+  title: string;
+  description: string;
+  diffContent: string;
+}

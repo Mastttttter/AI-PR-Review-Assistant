@@ -141,3 +141,10 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Tests: 65 tests pass (3 new SettingsPage tests, 2 updated API client tests); typecheck and build clean.
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer, 2026-05-30
+
+- [x] Add PR URI input and auto-fill to NewReviewPage
+  - Scope: Add FetchPrRequest and FetchPrResponse types; add fetchPrInfo(url) to API client calling POST /api/pr-fetch; add URL input row with "获取" button above form grid; auto-populate prTitle, prDescription, diffContent on success; show loading/error states.
+  - Acceptance: User can paste a GitHub PR URL, click fetch, and see form fields auto-populated; can edit fetched values before submitting; invalid URLs show error message.
+  - Tests: 71 tests pass (4 new App tests: render, populate, error, loading; 2 new apiClient tests: request/response, error handling).
+  - Owner: frontend-engineer
+  - Signed-off: frontend-engineer, 2026-05-30
