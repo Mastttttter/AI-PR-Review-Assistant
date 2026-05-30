@@ -161,3 +161,10 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Tests: 287/287 passing (21 settings tests, including 3 fixed GetSettings tests).
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-30
+
+- [x] Fix report 500 on string-typed changed_modules/key_files
+  - Scope: AI output sometimes returns changed_modules/key_files as strings instead of lists. Added _normalize_list() helper in _parse_summary to coerce strings to single-element lists, pass lists through, and default missing fields to empty list.
+  - Acceptance: Report endpoint returns 200 for tasks with string-typed summary fields; existing list fields still work.
+  - Tests: 290/290 passing (3 new normalization tests).
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-30

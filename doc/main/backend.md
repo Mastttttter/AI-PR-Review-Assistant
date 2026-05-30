@@ -324,3 +324,17 @@ Delivered scope:
 Verification:
 
 - 287/287 tests pass; 21 settings API tests pass independently.
+
+## Fix Report 500 for String-Typed Summary Fields
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- Added _normalize_list() helper in review_tasks.py that coerces string values to single-element lists for changed_modules and key_files fields in _parse_summary.
+- List values pass through unchanged; null/missing default to empty list.
+- Prevents Pydantic validation error (500) when AI output has string-typed list fields.
+
+Verification:
+
+- 290/290 tests pass (3 new normalization tests).
