@@ -21,6 +21,7 @@ class ReviewTask(UuidPrimaryKeyMixin, TimestampMixin, Base):
 
     pr_title: Mapped[str] = mapped_column(String(255), nullable=False)
     pr_description: Mapped[str | None] = mapped_column(Text)
+    pr_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     project_name: Mapped[str | None] = mapped_column(String(255))
     target_branch: Mapped[str | None] = mapped_column(String(255))
     developer_name: Mapped[str | None] = mapped_column(String(255))

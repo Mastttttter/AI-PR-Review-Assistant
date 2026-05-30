@@ -595,6 +595,38 @@ PR Review 报告
 
 ---
 
+## 7.12 PR 链接抓取
+
+### 功能说明
+
+用户输入 GitHub PR URL 后，系统自动抓取 PR 标题、描述、diff 内容，并填充到新建 Review 表单中。
+
+### 输入内容
+
+| 字段 | 是否必填 | 说明 |
+| ---- | ---- | ---- |
+| GitHub PR URL | 必填 | 格式为 `https://github.com/owner/repo/pull/123` |
+
+### 返回内容
+
+| 字段 | 说明 |
+| ---- | ---- |
+| title | PR 标题 |
+| description | PR 描述（可能为空） |
+| diff_content | PR 代码 diff（最长 50000 字符） |
+| project_name | 仓库全名（如 `octocat/hello-world`） |
+| target_branch | PR 目标分支（base ref） |
+| developer_name | PR 提交者 GitHub 用户名 |
+
+### 验收标准
+
+1. 输入有效 GitHub PR URL 后，返回标题、描述、diff 及项目/分支/开发者信息。
+2. URL 解析支持尾部路径（如 `/files`）和锚点片段。
+3. GitHub API 不可达时返回明确错误，含 404、403、429 等状态。
+4. diff 超过 50000 字符时自动截断。
+
+---
+
 ## 8. 页面需求
 
 ## 8.1 首页 / 工作台

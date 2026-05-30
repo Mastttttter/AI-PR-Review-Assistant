@@ -21,6 +21,7 @@ DbSession = Annotated[Session, Depends(get_db)]
 class ReviewTaskCreate(BaseModel):
     pr_title: str = Field(min_length=1, max_length=255)
     pr_description: str | None = None
+    pr_url: str | None = Field(default=None, max_length=2048)
     project_name: str | None = Field(default=None, max_length=255)
     target_branch: str | None = Field(default=None, max_length=255)
     developer_name: str | None = Field(default=None, max_length=255)
@@ -44,6 +45,7 @@ class ReviewTaskDetailResponse(BaseModel):
     id: str
     pr_title: str
     pr_description: str | None
+    pr_url: str | None
     project_name: str | None
     target_branch: str | None
     developer_name: str | None
@@ -62,6 +64,7 @@ class ReviewTaskDetailResponse(BaseModel):
 class ReviewTaskListItem(BaseModel):
     id: str
     pr_title: str
+    pr_url: str | None
     project_name: str | None
     developer_name: str | None
     status: TaskStatus
@@ -80,6 +83,7 @@ def create_review_task(payload: ReviewTaskCreate, demo_owner: DemoOwnerHeader, d
     task = ReviewTask(
         pr_title=payload.pr_title.strip(),
         pr_description=payload.pr_description,
+        pr_url=payload.pr_url,
         project_name=payload.project_name,
         target_branch=payload.target_branch,
         developer_name=payload.developer_name,
@@ -150,6 +154,7 @@ class ReportTaskNested(BaseModel):
     id: str
     pr_title: str
     pr_description: str | None
+    pr_url: str | None
     project_name: str | None
     target_branch: str | None
     developer_name: str | None
@@ -303,6 +308,7 @@ def get_review_report(task_id: str, demo_owner: DemoOwnerHeader, db: DbSession) 
         id=task.id,
         pr_title=task.pr_title,
         pr_description=task.pr_description,
+        pr_url=task.pr_url,
         project_name=task.project_name,
         target_branch=task.target_branch,
         developer_name=task.developer_name,

@@ -539,6 +539,33 @@ PATCH /api/review-issues/{issue_id}/feedback
 }
 ```
 
+## PR 抓取
+
+```http
+POST /api/pr-fetch
+```
+
+请求：
+
+```json
+{
+  "url": "https://github.com/octocat/hello-world/pull/42"
+}
+```
+
+响应 `FetchPrResponse`：
+
+```json
+{
+  "title": "Fix login bug",
+  "description": "Fixed the race condition.",
+  "diff_content": "diff --git ...",
+  "project_name": "octocat/hello-world",
+  "target_branch": "main",
+  "developer_name": "octocat"
+}
+```
+
 # 8. Prompt 架构
 
 建议把 Prompt 分成四层。
