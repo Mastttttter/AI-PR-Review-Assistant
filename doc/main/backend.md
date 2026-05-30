@@ -310,3 +310,17 @@ Verification:
 
 - 286 tests pass (20 settings API tests, 7 config loader factory tests, 259 prior tests).
 - Settings tests cover: env var defaults, masked keys, config.json persistence, update, override priority, connectivity success/failure/timeout/invalid-key/403/server-error, put-preserves-key (masked, empty, real), test-uses-stored-key (missing, direct, none-configured).
+
+## Fix OS Env Pollution in Settings Tests
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- Replaced monkeypatch.setenv() calls in 3 GetSettings tests (test_returns_env_var_defaults_when_no_config_file, test_masks_api_keys, test_masks_none_api_key) with monkeypatch.setattr() mocking load_llm_config() directly.
+- Each test returns a self-contained controlled config dict, fully immune to OS-level APR_OPENAI_*/APR_ANTHROPIC_* environment variables.
+- Net change: +33/-34 lines (simpler, drops ~5 setenv calls per test).
+
+Verification:
+
+- 287/287 tests pass; 21 settings API tests pass independently.

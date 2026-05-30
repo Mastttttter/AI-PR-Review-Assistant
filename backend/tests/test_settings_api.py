@@ -56,18 +56,17 @@ def clean_config(monkeypatch):
 
 
 class TestGetSettings:
-    def test_returns_env_var_defaults_when_no_config_file(self, client, clean_config, tmp_path, monkeypatch) -> None:
-        monkeypatch.setenv("APR_OPENAI_BASE_URI", "https://test.openai.com")
-        monkeypatch.setenv("APR_OPENAI_MODEL", "test-model")
-        monkeypatch.setenv("APR_OPENAI_API_KEY", "sk-abc123")
-        monkeypatch.setenv("APR_ANTHROPIC_BASE_URI", "https://api.anthropic.com")
-        monkeypatch.setenv("APR_ANTHROPIC_API_KEY", "")
-        monkeypatch.setenv("APR_ANTHROPIC_MODEL", "")
-        monkeypatch.setenv("APR_LLM_API_KEY", "")
-        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
-        monkeypatch.setenv("APR_LLM_PROVIDER", "openai")
-        get_settings.cache_clear()
-
+    def test_returns_env_var_defaults_when_no_config_file(self, client, monkeypatch) -> None:
+        monkeypatch.setattr(
+            "apr_backend.api.settings.load_llm_config",
+            lambda: {
+                "active_provider": "openai",
+                "mock_enabled": False,
+                "timeout": 60,
+                "openai": {"base_uri": "https://test.openai.com", "api_key": "sk-abc123", "model": "test-model"},
+                "anthropic": {"base_uri": "https://api.anthropic.com", "api_key": "sk-ant-key", "model": "claude-sonnet-4-6"},
+            },
+        )
         response = client.get("/api/settings", headers=OWNER)
         assert response.status_code == 200
         body = response.json()
@@ -77,34 +76,34 @@ class TestGetSettings:
         assert body["active_provider"] == "openai"
         assert body["mock_enabled"] is False
 
-    def test_masks_api_keys(self, client, clean_config, tmp_path, monkeypatch) -> None:
-        monkeypatch.setenv("APR_OPENAI_BASE_URI", "https://api.openai.com/v1")
-        monkeypatch.setenv("APR_OPENAI_MODEL", "gpt-4o-mini")
-        monkeypatch.setenv("APR_OPENAI_API_KEY", "sk-abcdefgh12345678")
-        monkeypatch.setenv("APR_ANTHROPIC_BASE_URI", "https://api.anthropic.com")
-        monkeypatch.setenv("APR_ANTHROPIC_MODEL", "claude-sonnet-4-6")
-        monkeypatch.setenv("APR_ANTHROPIC_API_KEY", "sk-ant-short")
-        monkeypatch.setenv("APR_LLM_API_KEY", "")
-        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
-        get_settings.cache_clear()
-
+    def test_masks_api_keys(self, client, monkeypatch) -> None:
+        monkeypatch.setattr(
+            "apr_backend.api.settings.load_llm_config",
+            lambda: {
+                "active_provider": "openai",
+                "mock_enabled": False,
+                "timeout": 60,
+                "openai": {"base_uri": "https://api.openai.com/v1", "api_key": "sk-abcdefgh12345678", "model": "gpt-4o-mini"},
+                "anthropic": {"base_uri": "https://api.anthropic.com", "api_key": "sk-ant-short", "model": "claude-sonnet-4-6"},
+            },
+        )
         response = client.get("/api/settings", headers=OWNER)
         assert response.status_code == 200
         body = response.json()
         assert body["openai"]["api_key"] == "***-5678"
         assert body["anthropic"]["api_key"] == "***-hort"
 
-    def test_masks_none_api_key(self, client, clean_config, tmp_path, monkeypatch) -> None:
-        monkeypatch.setenv("APR_OPENAI_BASE_URI", "https://api.openai.com/v1")
-        monkeypatch.setenv("APR_OPENAI_MODEL", "gpt-4o-mini")
-        monkeypatch.setenv("APR_OPENAI_API_KEY", "")
-        monkeypatch.setenv("APR_ANTHROPIC_BASE_URI", "https://api.anthropic.com")
-        monkeypatch.setenv("APR_ANTHROPIC_MODEL", "claude-sonnet-4-6")
-        monkeypatch.setenv("APR_ANTHROPIC_API_KEY", "")
-        monkeypatch.setenv("APR_LLM_API_KEY", "")
-        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
-        get_settings.cache_clear()
-
+    def test_masks_none_api_key(self, client, monkeypatch) -> None:
+        monkeypatch.setattr(
+            "apr_backend.api.settings.load_llm_config",
+            lambda: {
+                "active_provider": "openai",
+                "mock_enabled": False,
+                "timeout": 60,
+                "openai": {"base_uri": "https://api.openai.com/v1", "api_key": None, "model": "gpt-4o-mini"},
+                "anthropic": {"base_uri": "https://api.anthropic.com", "api_key": None, "model": "claude-sonnet-4-6"},
+            },
+        )
         response = client.get("/api/settings", headers=OWNER)
         assert response.status_code == 200
         body = response.json()

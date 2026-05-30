@@ -152,3 +152,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Tests: 7 new factory integration tests. 280 total suite passes.
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-30
+
+## Test fixes
+
+- [x] Fix OS env pollution in settings tests
+  - Scope: Mock load_llm_config() directly in GetSettings tests instead of monkeypatching env vars. This avoids pydantic_settings reading real OS environment values (APR_OPENAI_*, APR_ANTHROPIC_*) that cannot be reliably overridden.
+  - Acceptance: All 287 tests pass on main regardless of OS environment variables.
+  - Tests: 287/287 passing (21 settings tests, including 3 fixed GetSettings tests).
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-30
