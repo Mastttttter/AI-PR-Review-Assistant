@@ -132,6 +132,8 @@ describe('ApiClient', () => {
     const fetcher = vi.fn(async () => jsonResponse({
       openai: { base_uri: 'https://api.openai.com/v1', api_key: 'sk-abc', model: 'gpt-4' },
       anthropic: { base_uri: 'https://api.anthropic.com', api_key: 'sk-ant-xyz', model: 'claude-3-opus' },
+      active_provider: 'openai',
+      mock_enabled: true,
     }));
     const client = new ApiClient({ fetcher });
 
@@ -141,18 +143,24 @@ describe('ApiClient', () => {
     expect(settings.openai.apiKey).toBe('sk-abc');
     expect(settings.anthropic.baseUri).toBe('https://api.anthropic.com');
     expect(settings.anthropic.apiKey).toBe('sk-ant-xyz');
+    expect(settings.activeProvider).toBe('openai');
+    expect(settings.mockEnabled).toBe(true);
   });
 
   it('serializes updateSettings with snake_case keys', async () => {
     const fetcher = vi.fn(async () => jsonResponse({
       openai: { base_uri: 'https://api.openai.com/v1', api_key: 'sk-abc', model: 'gpt-4' },
       anthropic: { base_uri: 'https://api.anthropic.com', api_key: 'sk-ant-xyz', model: 'claude-3-opus' },
+      active_provider: 'openai',
+      mock_enabled: true,
     }));
     const client = new ApiClient({ baseUrl: '/api', fetcher });
 
     const payload: SettingsResponse = {
       openai: { baseUri: 'https://api.openai.com/v1', apiKey: 'sk-abc', model: 'gpt-4' },
       anthropic: { baseUri: 'https://api.anthropic.com', apiKey: 'sk-ant-xyz', model: 'claude-3-opus' },
+      activeProvider: 'openai',
+      mockEnabled: true,
     };
     await client.updateSettings(payload);
 
@@ -161,6 +169,8 @@ describe('ApiClient', () => {
       body: JSON.stringify({
         openai: { base_uri: 'https://api.openai.com/v1', api_key: 'sk-abc', model: 'gpt-4' },
         anthropic: { base_uri: 'https://api.anthropic.com', api_key: 'sk-ant-xyz', model: 'claude-3-opus' },
+        active_provider: 'openai',
+        mock_enabled: true,
       }),
     }));
   });
