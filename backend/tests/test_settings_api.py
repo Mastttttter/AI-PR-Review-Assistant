@@ -82,6 +82,7 @@ class TestGetSettings:
 
     def test_masks_none_api_key(self, client, clean_config, tmp_path, monkeypatch) -> None:
         monkeypatch.setenv("APR_OPENAI_API_KEY", "")
+        monkeypatch.setenv("APR_LLM_API_KEY", "")
         get_settings.cache_clear()
 
         response = client.get("/api/settings", headers=OWNER)
@@ -320,8 +321,8 @@ class TestPostUsesStoredKey:
         monkeypatch.setattr("apr_backend.api.settings.CONFIG_PATH", config_path)
         monkeypatch.setattr("apr_backend.api.settings._CONFIG_DIR", config_path.parent)
         monkeypatch.setattr("apr_backend.core.config_loader._CONFIG_PATH", config_path)
-        monkeypatch.delenv("APR_OPENAI_API_KEY", raising=False)
-        monkeypatch.delenv("APR_LLM_API_KEY", raising=False)
+        monkeypatch.setenv("APR_OPENAI_API_KEY", "")
+        monkeypatch.setenv("APR_LLM_API_KEY", "")
         get_settings.cache_clear()
 
         payload = {"provider": "openai", "base_uri": "https://api.openai.com/v1", "model": "gpt-4"}
