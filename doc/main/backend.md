@@ -338,3 +338,18 @@ Delivered scope:
 Verification:
 
 - 290/290 tests pass (3 new normalization tests).
+
+## System Prompt Configuration
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- Added `system_prompt` setting (APR_SYSTEM_PROMPT env var, default empty).
+- Added system_prompt to config_loader.py: included in default config dict and read from config.json.
+- Added system_prompt to settings API: GET returns it unmasked, PUT persists it.
+- Updated _build_prompt in orchestrator.py: reads system_prompt from load_llm_config(); uses custom prompt when non-empty, falls back to hardcoded SYSTEM_PROMPT when empty/whitespace.
+
+Verification:
+
+- 297/297 tests pass (7 new: 3 config_loader, 2 settings API, 2 orchestrator).
