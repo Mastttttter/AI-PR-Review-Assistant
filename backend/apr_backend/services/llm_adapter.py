@@ -8,7 +8,7 @@ from typing import Any
 
 import httpx
 
-from apr_backend.core.settings import get_settings
+from apr_backend.core.config_loader import load_llm_config
 
 logger = logging.getLogger(__name__)
 
@@ -217,24 +217,38 @@ class AnthropicLLMProvider(LLMProvider):
 
 
 def create_llm_provider() -> LLMProvider:
-    settings = get_settings()
-    if settings.llm_mock_enabled or settings.llm_api_key is None:
-        logger.info("Using MockLLMProvider (mock_enabled=%s, api_key_set=%s)", settings.llm_mock_enabled, settings.llm_api_key is not None)
+    config = load_llm_config()
+    active_provider = config.get("active_provider", "openai")
+    if active_provider not in ("openai", "anthropic"):
+        active_provider = "openai"
+
+    if config["mock_enabled"]:
+        logger.info("Using MockLLMProvider (mock_enabled=true)")
         return MockLLMProvider()
 
-    api_key = settings.llm_api_key.get_secret_value()
-    if settings.llm_provider == "anthropic":
-        logger.info("Using AnthropicLLMProvider (model=%s, base_url=%s)", settings.llm_model, settings.llm_base_url)
+    provider_cfg = config.get(active_provider, {})
+    api_key = provider_cfg.get("api_key") if isinstance(provider_cfg, dict) else None
+    if not api_key:
+        logger.info("Using MockLLMProvider (no api_key for provider=%s)", active_provider)
+        return MockLLMProvider()
+
+    base_url = provider_cfg.get("base_uri", "")
+    model = provider_cfg.get("model", "")
+    timeout = config.get("timeout", 60)
+
+    if active_provider == "anthropic":
+        logger.info("Using AnthropicLLMProvider (model=%s, base_url=%s)", model, base_url)
         return AnthropicLLMProvider(
             api_key=api_key,
-            base_url=settings.llm_base_url,
-            model=settings.llm_model,
-            timeout=settings.llm_timeout,
+            base_url=base_url,
+            model=model,
+            timeout=timeout,
         )
 
+    logger.info("Using OpenAICompatibleProvider (model=%s, base_url=%s)", model, base_url)
     return OpenAICompatibleProvider(
         api_key=api_key,
-        base_url=settings.llm_base_url,
-        model=settings.llm_model,
-        timeout=settings.llm_timeout,
+        base_url=base_url,
+        model=model,
+        timeout=timeout,
     )

@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     llm_mock_enabled: bool = False
     llm_provider: str = "openai"
 
+    openai_base_uri: str = "https://api.openai.com/v1"
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-4o-mini"
+    anthropic_base_uri: str = "https://api.anthropic.com"
+    anthropic_api_key: str | None = None
+    anthropic_model: str = "claude-sonnet-4-6"
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -496,6 +496,95 @@ class TestFactory:
         assert isinstance(provider, OpenAICompatibleProvider)
 
 
+class TestFactoryConfigJson:
+    def test_uses_config_json_values_when_present(self, monkeypatch, tmp_path) -> None:
+        config_path = tmp_path / "config.json"
+        monkeypatch.setattr("apr_backend.core.config_loader._CONFIG_PATH", config_path)
+        config_path.write_text(json.dumps({
+            "active_provider": "anthropic",
+            "openai": {"base_uri": "https://openai.example.com", "api_key": "sk-openai-cfg", "model": "gpt-5"},
+            "anthropic": {"base_uri": "https://anthropic.example.com", "api_key": "sk-ant-cfg", "model": "claude-opus"},
+        }))
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
+        get_settings.cache_clear()
+        provider = create_llm_provider()
+        get_settings.cache_clear()
+        assert isinstance(provider, AnthropicLLMProvider)
+        assert provider._base_url == "https://anthropic.example.com"
+        assert provider._model == "claude-opus"
+
+    def test_falls_back_to_env_vars_when_no_config_file(self, monkeypatch) -> None:
+        monkeypatch.setenv("APR_LLM_API_KEY", "sk-legacy")
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
+        monkeypatch.setenv("APR_LLM_PROVIDER", "openai")
+        get_settings.cache_clear()
+        provider = create_llm_provider()
+        get_settings.cache_clear()
+        assert isinstance(provider, OpenAICompatibleProvider)
+
+    def test_mock_bypass_when_mock_enabled(self, monkeypatch, tmp_path) -> None:
+        config_path = tmp_path / "config.json"
+        monkeypatch.setattr("apr_backend.core.config_loader._CONFIG_PATH", config_path)
+        config_path.write_text(json.dumps({
+            "openai": {"base_uri": "https://openai.example.com", "api_key": "sk-openai", "model": "gpt-4"},
+        }))
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "true")
+        get_settings.cache_clear()
+        provider = create_llm_provider()
+        get_settings.cache_clear()
+        assert isinstance(provider, MockLLMProvider)
+
+    def test_missing_config_json_does_not_crash(self, monkeypatch, tmp_path) -> None:
+        config_path = tmp_path / "nonexistent" / "config.json"
+        monkeypatch.setattr("apr_backend.core.config_loader._CONFIG_PATH", config_path)
+        monkeypatch.setenv("APR_LLM_API_KEY", "sk-legacy")
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
+        get_settings.cache_clear()
+        provider = create_llm_provider()
+        get_settings.cache_clear()
+        assert isinstance(provider, OpenAICompatibleProvider)
+
+    def test_malformed_config_json_falls_back_gracefully(self, monkeypatch, tmp_path) -> None:
+        config_path = tmp_path / "config.json"
+        monkeypatch.setattr("apr_backend.core.config_loader._CONFIG_PATH", config_path)
+        config_path.write_text("{invalid json!!!")
+        monkeypatch.setenv("APR_LLM_API_KEY", "sk-legacy")
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
+        get_settings.cache_clear()
+        provider = create_llm_provider()
+        get_settings.cache_clear()
+        assert isinstance(provider, OpenAICompatibleProvider)
+
+    def test_config_json_overrides_env_vars(self, monkeypatch, tmp_path) -> None:
+        config_path = tmp_path / "config.json"
+        monkeypatch.setattr("apr_backend.core.config_loader._CONFIG_PATH", config_path)
+        config_path.write_text(json.dumps({
+            "active_provider": "openai",
+            "openai": {"base_uri": "https://cfg.openai.com", "api_key": "sk-cfg", "model": "cfg-model"},
+        }))
+        monkeypatch.setenv("APR_OPENAI_BASE_URI", "https://env.openai.com")
+        monkeypatch.setenv("APR_OPENAI_API_KEY", "sk-env-key")
+        monkeypatch.setenv("APR_OPENAI_MODEL", "env-model")
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
+        get_settings.cache_clear()
+        provider = create_llm_provider()
+        get_settings.cache_clear()
+        assert isinstance(provider, OpenAICompatibleProvider)
+        assert provider._base_url == "https://cfg.openai.com"
+        assert provider._model == "cfg-model"
+
+    def test_provider_specific_env_vars_as_fallback(self, monkeypatch) -> None:
+        monkeypatch.setenv("APR_ANTHROPIC_API_KEY", "sk-ant-env")
+        monkeypatch.setenv("APR_ANTHROPIC_MODEL", "claude-env-model")
+        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "false")
+        monkeypatch.setenv("APR_LLM_PROVIDER", "anthropic")
+        get_settings.cache_clear()
+        provider = create_llm_provider()
+        get_settings.cache_clear()
+        assert isinstance(provider, AnthropicLLMProvider)
+        assert provider._model == "claude-env-model"
+
+
 class TestLLMErrorHierarchy:
     def test_llm_error_is_exception(self) -> None:
         with pytest.raises(LLMError):
