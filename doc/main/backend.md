@@ -353,3 +353,20 @@ Delivered scope:
 Verification:
 
 - 297/297 tests pass (7 new: 3 config_loader, 2 settings API, 2 orchestrator).
+
+## PR Fetch API
+
+Status: completed by backend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- Created POST /api/pr-fetch endpoint that accepts a GitHub PR URL and returns title, description, and diff_content.
+- URL parsing extracts owner/repo/pull_number, handles trailing paths and fragments.
+- Two GitHub API calls: metadata (Accept: vnd.github.v3+json) and diff (Accept: vnd.github.v3.diff).
+- Diff capped at 50k characters.
+- Error handling: invalid URL -> 400, 404 -> 404, 403 -> 403, 429 -> 429, timeout/network -> 502.
+- Demo owner header required.
+
+Verification:
+
+- 312/312 tests pass (15 new PR fetch endpoint tests).

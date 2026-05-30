@@ -175,3 +175,10 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Tests: 297/297 passing (7 new: 3 config_loader, 2 settings API, 2 orchestrator).
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-30
+
+- [x] Add PR fetch API endpoint (POST /api/pr-fetch)
+  - Scope: Create POST /api/pr-fetch endpoint that parses GitHub PR URLs, fetches title/description via GitHub metadata API and diff via diff API, caps diff at 50k chars, and returns structured response. Error handling for invalid URLs, 404, 403, 429, and network errors.
+  - Acceptance: Returns title, description, and diff_content for valid GitHub PR URLs; handles trailing paths and fragments; proper error codes for all failure modes.
+  - Tests: 312/312 passing (15 new PR fetch endpoint tests).
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-30
