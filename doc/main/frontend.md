@@ -429,3 +429,20 @@ Verification:
 
 - 71/71 tests pass (6 new: 4 App + 2 apiClient); typecheck clean; build succeeds.
 - Browser validation: 8/8 acceptance criteria pass (UI layout, button states, valid URL fetch, edit after fetch, invalid URL error, non-existent PR error).
+
+## PR Fetch Auto-Fill All Fields and pr_url Display
+
+Status: completed by frontend-engineer on 2026-05-30.
+
+Delivered scope:
+
+- Extended FetchPrResponse type with projectName, targetBranch, developerName fields.
+- Updated NewReviewPage handleFetchPr to auto-fill all 6 form fields (prTitle, prDescription, diffContent, projectName, targetBranch, developerName).
+- Added prUrl field to ReviewTask and CreateReviewTaskRequest types.
+- Stored prUrl in form state on fetch and passed to createReviewTask API call.
+- ReportDetailCard displays prUrl as clickable link (target="_blank" rel="noopener noreferrer") when non-empty.
+- All auto-filled fields remain editable before submission.
+
+Verification:
+
+- 72/72 tests pass (3 updated tests, 1 new report detail test); typecheck clean; build succeeds.

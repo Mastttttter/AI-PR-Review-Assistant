@@ -148,3 +148,10 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Tests: 71 tests pass (4 new App tests: render, populate, error, loading; 2 new apiClient tests: request/response, error handling).
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer, 2026-05-30
+
+- [x] Auto-fill all PR fetch fields and display pr_url on report detail
+  - Scope: Update FetchPrResponse type with projectName/targetBranch/developerName; auto-fill all 6 fields on NewReviewPage; store prUrl on form and send with create API; display prUrl as clickable link on ReportDetailCard.
+  - Acceptance: All 6 fields auto-populate from PR fetch; fields remain editable; pr_url stored and displayed as clickable link; error states handled.
+  - Tests: 72/72 pass (3 updated, 1 new report test).
+  - Owner: frontend-engineer
+  - Signed-off: frontend-engineer, 2026-05-30
