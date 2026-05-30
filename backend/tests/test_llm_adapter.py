@@ -512,15 +512,34 @@ class TestFactoryConfigJson:
         assert config["system_prompt"] == "Custom system prompt for testing."
 
     def test_system_prompt_from_env_var(self, monkeypatch) -> None:
-        monkeypatch.setenv("APR_SYSTEM_PROMPT", "Env system prompt.")
-        monkeypatch.setenv("APR_LLM_MOCK_ENABLED", "true")
+        from types import SimpleNamespace
+        monkeypatch.setattr(
+            "apr_backend.core.settings.get_settings",
+            lambda: SimpleNamespace(
+                llm_provider="openai", llm_mock_enabled=True, llm_timeout=60,
+                system_prompt="Env system prompt.",
+                openai_base_uri="", openai_api_key=None, openai_model="",
+                anthropic_base_uri="", anthropic_api_key=None, anthropic_model="",
+                llm_api_key=None,
+            ),
+        )
         get_settings.cache_clear()
         config = load_llm_config()
         get_settings.cache_clear()
         assert config["system_prompt"] == "Env system prompt."
 
     def test_system_prompt_default_empty(self, monkeypatch) -> None:
-        monkeypatch.setenv("APR_LLM_API_KEY", "")
+        from types import SimpleNamespace
+        monkeypatch.setattr(
+            "apr_backend.core.settings.get_settings",
+            lambda: SimpleNamespace(
+                llm_provider="openai", llm_mock_enabled=True, llm_timeout=60,
+                system_prompt="",
+                openai_base_uri="", openai_api_key=None, openai_model="",
+                anthropic_base_uri="", anthropic_api_key=None, anthropic_model="",
+                llm_api_key=None,
+            ),
+        )
         get_settings.cache_clear()
         config = load_llm_config()
         get_settings.cache_clear()
