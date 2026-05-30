@@ -89,6 +89,13 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer, 2026-05-30
 
+- [x] Reorganize frontend into `frontend/` directory
+  - Scope: Move src/, index.html, package.json, pnpm-lock.yaml, tsconfig.json, vite.config.ts into a new frontend/ directory; update justfile with frontend-install, frontend-dev, frontend-build, frontend-test, frontend-verify commands following backend-dir pattern; delete root node_modules/.
+  - Acceptance: Root directory clean (backend/, frontend/, doc/, docker-compose.yml, justfile, .gitignore). cd frontend && pnpm verify passes. just frontend-dev works. Backend unaffected.
+  - Tests: pnpm verify (typecheck, 45 tests, build).
+  - Owner: frontend-engineer
+  - Signed-off: frontend-engineer
+
 ## Bug fixes (2026-05-30)
 
 - [x] Fix navigation dead link for /reviews/demo-report
