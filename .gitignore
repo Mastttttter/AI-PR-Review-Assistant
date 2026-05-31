@@ -3,3 +3,4 @@ dist/
 .vite/
 *.tsbuildinfo
 .mcp.json
+dispatcher/auths/

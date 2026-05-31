@@ -396,7 +396,7 @@ const ruleTypeOptions: RuleType[] = ['test', 'style', 'security', 'documentation
 const severityOptions: IssueSeverity[] = ['low', 'medium', 'high'];
 
 function emptyRuleForm(): UpsertReviewRuleRequest {
-  return { name: '', description: '', type: 'style', severity: 'medium', enabled: true };
+  return { name: '', description: '', ruleType: 'style', severity: 'medium', enabled: true };
 }
 
 function validateRuleForm(form: UpsertReviewRuleRequest): RuleFormErrors {
@@ -439,7 +439,7 @@ function RulesPage({ client }: { client: RulesClientApi }) {
 
   function openEditForm(rule: ReviewRule) {
     setEditingId(rule.id);
-    setForm({ name: rule.name, description: rule.description, type: rule.type, severity: rule.severity, enabled: rule.enabled });
+    setForm({ name: rule.name, description: rule.description, ruleType: rule.ruleType, severity: rule.severity, enabled: rule.enabled });
     setFormErrors({});
     setActionError(null);
     setShowForm(true);
@@ -524,7 +524,7 @@ function RulesPage({ client }: { client: RulesClientApi }) {
               </label>
               <label className="form-field">
                 <span>规则类型</span>
-                <select value={form.type} onChange={(e) => updateFormField('type', e.target.value as RuleType)}>
+                <select value={form.ruleType} onChange={(e) => updateFormField('ruleType', e.target.value as RuleType)}>
                   {ruleTypeOptions.map((t) => <option key={t} value={t}>{ruleTypeLabels[t]}</option>)}
                 </select>
               </label>
@@ -583,7 +583,7 @@ function RulesPage({ client }: { client: RulesClientApi }) {
                         <small>{rule.description}</small>
                       </div>
                     </td>
-                    <td><span className="rule-type-badge">{ruleTypeLabels[rule.type]}</span></td>
+                    <td><span className="rule-type-badge">{ruleTypeLabels[rule.ruleType]}</span></td>
                     <td><span className={`severity-badge severity-${rule.severity}`}>{issueSeverityLabels[rule.severity]}</span></td>
                     <td>
                       <button type="button" className={`rule-toggle toggle-${rule.enabled ? 'on' : 'off'}`} onClick={() => toggleEnabled(rule)}>

@@ -49,7 +49,7 @@ def _build_prompt(task: ReviewTask, parsed: ParsedDiff, rule_matches: list[RuleM
 
     if rule_matches:
         matches_json = [{"rule_id": m.rule_id, "rule_name": m.rule_name, "description": m.description, "file_path": m.file_path, "line_hint": m.line_hint} for m in rule_matches]
-        parts.extend(["", "## Pre-matched Rule Results (for context)", "These rules were matched deterministically. Include their rule_id values in matched_rule_ids for any related issues.", json.dumps(matches_json, indent=2)])
+        parts.extend(["", "## Pre-matched Rule Hints (for reference)", "These patterns were detected deterministically. Consider them when evaluating rules, but you should independently assess ALL enabled rules against the diff.", json.dumps(matches_json, indent=2)])
 
     parts.extend([
         "",
@@ -79,13 +79,13 @@ def _build_prompt(task: ReviewTask, parsed: ParsedDiff, rule_matches: list[RuleM
         "summary: {purpose, changed_modules, key_files, business_impact, test_or_security_notes}",
         "risk: {level, reasons}",
         "issues: [{title, type, severity, description, location: {file_path, line_hint, code_snippet}, suggestion, confidence, matched_rule_ids}]",
-        "matched_rule_ids must be a list of rule_id values from the Pre-matched Rule Results section (empty list if none apply).",
+        "matched_rule_ids must be a list of rule_id values from the Team Rules section for rules that apply to this diff (empty list if none apply).",
     ])
 
     return "\n".join(parts)
 
 
-def _validate_and_normalize_ai_output(raw: dict, rule_match_ids: set[str]) -> dict:
+def _validate_and_normalize_ai_output(raw: dict, valid_rule_ids: set[str]) -> dict:
     risk = raw.get("risk", {})
     level = risk.get("level", "low")
     if level not in {"low", "medium", "high"}:
@@ -118,7 +118,7 @@ def _validate_and_normalize_ai_output(raw: dict, rule_match_ids: set[str]) -> di
         if not issue.get("suggestion"):
             issue["suggestion"] = "Review and consider improvements."
         matched = set(issue.get("matched_rule_ids") or [])
-        matched = matched & rule_match_ids
+        matched = matched & valid_rule_ids
         issue["matched_rule_ids"] = list(matched)
         normalized_issues.append(issue)
 
@@ -127,8 +127,8 @@ def _validate_and_normalize_ai_output(raw: dict, rule_match_ids: set[str]) -> di
     return raw
 
 
-def _persist_report(db: Session, task: ReviewTask, ai_result: dict, rule_match_ids: set[str]) -> None:
-    validated = _validate_and_normalize_ai_output(ai_result, rule_match_ids)
+def _persist_report(db: Session, task: ReviewTask, ai_result: dict, valid_rule_ids: set[str]) -> None:
+    validated = _validate_and_normalize_ai_output(ai_result, valid_rule_ids)
     summary = validated.get("summary", {})
     risk = validated.get("risk", {})
     issues = validated.get("issues", [])
@@ -213,7 +213,7 @@ def _process_task(db: Session, task: ReviewTask) -> None:
     parsed = parse_diff(task.diff_content)
     rules = _load_enabled_rules(db, task.demo_owner)
     rule_matches = run_rule_engine(rules, parsed, task.diff_content)
-    rule_match_ids = {m.rule_id for m in rule_matches}
+    valid_rule_ids = {r.id for r in rules}
 
     prompt = _build_prompt(task, parsed, rule_matches, rules)
 
@@ -230,7 +230,7 @@ def _process_task(db: Session, task: ReviewTask) -> None:
         db.commit()
         return
 
-    _persist_report(db, task, ai_result, rule_match_ids)
+    _persist_report(db, task, ai_result, valid_rule_ids)
     task.status = TaskStatus.completed
     db.commit()
     logger.info("Review completed for task %s: %d issues, risk=%s", task.id, task.issue_count, task.risk_level)

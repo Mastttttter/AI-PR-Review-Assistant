@@ -19,7 +19,7 @@ export const mockReviewRule: ReviewRule = {
   id: 'rule-001',
   name: '修改核心逻辑必须补充测试',
   description: '修改登录、支付、权限等核心逻辑时必须补充测试。',
-  type: 'test',
+  ruleType: 'test',
   severity: 'medium',
   enabled: true,
   createdAt: '2026-05-29T09:00:00.000Z',

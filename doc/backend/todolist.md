@@ -220,9 +220,21 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-31
 
-- [x] Dual-model response and config template for dispatcher
+- [x] Update dispatcher to return both openai_model and anthropic_model + proper config.yaml template
+  - Branch: `feat/dispatcher-dual-provider-config`
   - Scope: Return both openai_model and anthropic_model in /api/issue-key response. Add envAnthropicModel() with DISPATCHER_ANTHROPIC_MODEL env var and claude-api-key config fallback. Rename envModel to envOpenAIModel. Update config.example.yaml with both provider sections (openai-compatibility, claude-api-key). Backward compat model field preserved.
   - Acceptance: /api/issue-key returns openai_model and anthropic_model; config.example.yaml shows both providers; all Go tests pass.
   - Tests: 24/24 passing (12 main: +3 anthropic model tests, +2 response field assertions, renamed 2 openai model tests; 12 tempkey unchanged).
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-31
+
+## Dispatcher: dual-provider config + both models in response
+
+- [ ] Update Python backend DispatcherFetchResponse to pass both models
+  - Branch: `feat/dispatcher-dual-model-response`
+  - Scope:
+    - `backend/apr_backend/api/settings.py`: Add `openai_model: str` and `anthropic_model: str = ""` to `DispatcherFetchResponse`. Update `dispatcher_fetch()` return statement to pass both fields from dispatcher JSON response.
+    - Update backend settings tests to assert both model fields in success response.
+  - Acceptance: `POST /api/settings/dispatcher-fetch` response includes `openai_model` and `anthropic_model`; existing tests pass.
+  - Tests: 323/323 passing, all 29 settings tests pass, updated dispatcher-fetch tests verify both model fields.
+  - Owner: backend-engineer

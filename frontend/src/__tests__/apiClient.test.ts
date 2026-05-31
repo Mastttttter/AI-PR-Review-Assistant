@@ -99,7 +99,7 @@ describe('ApiClient', () => {
     const client = new ApiClient({ baseUrl: '/api', fetcher });
 
     await client.listReviewTasks({ projectName: 'user-center', riskLevel: 'high', status: 'completed' });
-    await client.createReviewRule({ name: mockReviewRule.name, description: mockReviewRule.description, type: 'test', severity: 'medium', enabled: true });
+    await client.createReviewRule({ name: mockReviewRule.name, description: mockReviewRule.description, ruleType: 'test', severity: 'medium', enabled: true });
     await client.updateIssueFeedback('issue-001', { feedbackStatus: 'false_positive', comment: '这是误报' });
 
     expect(fetcher).toHaveBeenNthCalledWith(1, '/api/review-tasks?project_name=user-center&risk_level=high&status=completed', expect.any(Object));

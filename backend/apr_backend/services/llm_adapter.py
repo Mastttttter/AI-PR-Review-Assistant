@@ -45,8 +45,8 @@ class LLMProvider(ABC):
 
 
 def _extract_rule_ids_from_prompt(prompt: str) -> list[str]:
-    """Extract rule_id values from the Pre-matched Rule Results section of the prompt."""
-    match = re.search(r"## Pre-matched Rule Results.*?\n(\[.*?\])\s*\n", prompt, re.DOTALL)
+    """Extract rule_id values from the Pre-matched Rule Hints or Team Rules section of the prompt."""
+    match = re.search(r"## Pre-matched Rule (?:Results|Hints).*?\n(\[.*?\])\s*\n", prompt, re.DOTALL)
     if not match:
         return []
     try:
@@ -97,7 +97,7 @@ class OpenAICompatibleProvider(LLMProvider):
     def __init__(
         self,
         api_key: str,
-        base_url: str = "https://api.openai.com/v1",
+        base_url: str = "https://api.openai.com",
         model: str = "gpt-4o-mini",
         timeout: int = 60,
     ) -> None:
@@ -108,7 +108,7 @@ class OpenAICompatibleProvider(LLMProvider):
 
     def generate_review(self, prompt: str) -> dict[str, Any]:
         logger.info("LLM call: model=%s prompt_length=%d preview=%s", self._model, len(prompt), _redact_for_log(prompt))
-        url = f"{self._base_url}/chat/completions"
+        url = f"{self._base_url}/v1/chat/completions"
 
         try:
             response = httpx.post(

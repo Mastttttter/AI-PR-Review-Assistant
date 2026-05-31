@@ -66,14 +66,14 @@ func (p *Provider) Authenticate(ctx context.Context, r *http.Request) (*sdkacces
 	}, nil
 }
 
-// IssueKey generates a new temp key, destroying any existing valid key first.
+// IssueKey generates a new temp key. Only expired keys are cleaned up.
 func (p *Provider) IssueKey(rawKey string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	now := time.Now()
 	for k, e := range p.keys {
-		if now.Before(e.ExpiresAt) {
+		if now.After(e.ExpiresAt) {
 			delete(p.keys, k)
 		}
 	}

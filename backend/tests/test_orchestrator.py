@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from apr_backend.core.settings import get_settings
 from apr_backend.db.enums import RiskLevel, RuleType, Severity, TaskStatus
-from apr_backend.db.models import ReviewRule, ReviewReport, ReviewTask
+from apr_backend.db.models import ReviewIssue, ReviewRule, ReviewReport, ReviewTask
 from apr_backend.services.diff_parser import parse_diff
 from apr_backend.services.llm_adapter import LLMError, MockLLMProvider
 from apr_backend.services.orchestrator import _build_prompt, run_review_orchestrator
@@ -301,3 +301,67 @@ class TestSystemPrompt:
         parsed = parse_diff(task.diff_content)
         prompt = _build_prompt(task, parsed, [], [])
         assert "You are an AI PR Review assistant" in prompt
+
+
+class TestLLMRuleDetection:
+    def test_accepts_llm_matched_rule_not_pre_matched(self, db_session_factory, monkeypatch) -> None:
+        rule_id = "00000000-0000-0000-0000-000000000001"
+        with db_session_factory() as session:
+            session.add(ReviewRule(
+                id=rule_id, name="Expr Rule", description="An enabled rule",
+                rule_type=RuleType.style, severity=Severity.low,
+                enabled=True, demo_owner="test-owner",
+            ))
+            session.commit()
+
+        class CustomRuleProvider:
+            def generate_review(self, _prompt):
+                result = MockLLMProvider().generate_review(_prompt)
+                result["issues"][0]["matched_rule_ids"] = [rule_id]
+                return result
+
+        monkeypatch.setattr(
+            "apr_backend.services.orchestrator.create_llm_provider",
+            lambda: CustomRuleProvider(),
+        )
+        task = _create_task(db_session_factory)
+
+        run_review_orchestrator(task.id, db_factory=db_session_factory)
+
+        with db_session_factory() as session:
+            issues = session.scalars(
+                select(ReviewIssue).where(ReviewIssue.task_id == task.id)
+            ).all()
+            assert len(issues) > 0
+            assert rule_id in issues[0].matched_rule_ids
+
+    def test_filters_unknown_rule_ids(self, db_session_factory, monkeypatch) -> None:
+        known_id = "00000000-0000-0000-0000-000000000002"
+        with db_session_factory() as session:
+            session.add(ReviewRule(
+                id=known_id, name="Known Rule", description="An enabled rule",
+                rule_type=RuleType.style, severity=Severity.low,
+                enabled=True, demo_owner="test-owner",
+            ))
+            session.commit()
+
+        class MixedRuleProvider:
+            def generate_review(self, _prompt):
+                result = MockLLMProvider().generate_review(_prompt)
+                result["issues"][0]["matched_rule_ids"] = [known_id, "unknown-xyz"]
+                return result
+
+        monkeypatch.setattr(
+            "apr_backend.services.orchestrator.create_llm_provider",
+            lambda: MixedRuleProvider(),
+        )
+        task = _create_task(db_session_factory)
+
+        run_review_orchestrator(task.id, db_factory=db_session_factory)
+
+        with db_session_factory() as session:
+            issues = session.scalars(
+                select(ReviewIssue).where(ReviewIssue.task_id == task.id)
+            ).all()
+            assert known_id in issues[0].matched_rule_ids
+            assert "unknown-xyz" not in issues[0].matched_rule_ids
