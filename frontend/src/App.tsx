@@ -1016,12 +1016,8 @@ function SettingsPage({ client }: { client: SettingsClientApi }) {
     try {
       const result: DispatcherFetchResponse = await client.fetchDispatcherCredentials(dispatcherUrl.trim());
       setDispatcherResult(result);
-      const providerKey = activeProvider;
-      if (providerKey === 'openai') {
-        setOpenai((prev) => ({ ...prev, baseUri: result.baseUri, apiKey: result.apiKey, model: result.model }));
-      } else {
-        setAnthropic((prev) => ({ ...prev, baseUri: result.baseUri, apiKey: result.apiKey, model: result.model }));
-      }
+      // Dispatcher issues OpenAI-compatible credentials — always fill OpenAI provider
+      setOpenai((prev) => ({ ...prev, baseUri: result.baseUri, apiKey: result.apiKey, model: result.model }));
       setSaved(false);
     } catch (e) {
       setDispatcherError(e instanceof ApiRequestError ? e.message : '获取凭证失败，请稍后重试。');

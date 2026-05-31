@@ -587,11 +587,12 @@ describe('Settings page', () => {
     await waitFor(() => expect(screen.queryByText('获取凭证')).not.toBeInTheDocument());
   });
 
-  it('auto-fills active provider fields and shows result on dispatcher success', async () => {
+  it('always auto-fills OpenAI provider regardless of active tab', async () => {
     const fetchDispatcherCredentials = vi.fn(async () => ({
       apiKey: 'sk-new-key', baseUri: 'https://new.example.com', model: 'gpt-5', expiresIn: 600,
     }));
-    renderAt('/settings', settingsClient({ getSettings: async () => realSettings, fetchDispatcherCredentials }));
+    const anthropicActiveSettings = { ...realSettings, activeProvider: 'anthropic' as const };
+    renderAt('/settings', settingsClient({ getSettings: async () => anthropicActiveSettings, fetchDispatcherCredentials }));
     await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
 
     await userEvent.click(screen.getByText('从 API 分发器获取凭证'));
@@ -601,16 +602,19 @@ describe('Settings page', () => {
 
     await waitFor(() => expect(fetchDispatcherCredentials).toHaveBeenCalledWith('https://dispatcher.example.com/keys'));
     await waitFor(() => expect(screen.getByText('凭证有效，剩余 10 分钟')).toBeInTheDocument());
-    // Check read-only display fields in dispatcher result section
     expect(screen.getByText('临时 API Key')).toBeInTheDocument();
-    // Check auto-filled OpenAI provider inputs (values also in read-only result fields)
+    // OpenAI inputs are auto-filled (values also in read-only result fields)
     const baseUriInputs = screen.getAllByDisplayValue('https://new.example.com');
-    expect(baseUriInputs.length).toBe(2); // read-only result + provider input
+    expect(baseUriInputs.length).toBe(2); // read-only result + OpenAI provider input
     const modelInputs = screen.getAllByDisplayValue('gpt-5');
-    expect(modelInputs.length).toBe(2); // read-only result + provider input
-    // Masked API key appears in result field and provider API Key field
+    expect(modelInputs.length).toBe(2); // read-only result + OpenAI provider input
     const keyInputs = screen.getAllByDisplayValue('****-key');
     expect(keyInputs.length).toBe(2);
+    // Anthropic inputs remain unchanged at default values
+    expect(screen.getByDisplayValue('https://api.anthropic.com')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('claude-3-opus')).toBeInTheDocument();
+    const anthropicKey = screen.getByDisplayValue('****83ab');
+    expect(anthropicKey).toBeInTheDocument();
   });
 
   it('shows loading state during dispatcher fetch', async () => {
