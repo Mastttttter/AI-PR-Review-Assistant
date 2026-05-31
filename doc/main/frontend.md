@@ -461,3 +461,8 @@ Verification:
 
 - **Scope:** Changed handleDispatcherFetch to fill both OpenAI and Anthropic providers with shared baseUri/apiKey and per-provider models from the dispatcher response (openaiModel, anthropicModel). Result display now shows separate "OpenAI Model" and "Anthropic Model" read-only fields. Updated DispatcherFetchResponse type with openaiModel and anthropicModel fields.
 - **Verification:** pnpm verify clean (79/79 tests, typecheck, build 270.23 kB).
+
+### Key-expired specific error message (2026-05-31)
+
+- **Scope:** Added errorMessage field to ReviewTask type. Updated ReportPage polling logic to detect key_expired and show a specific actionable message ("API key 可能超时，请刷新后重试") instead of the generic failure text. Generic failure message preserved for all other error types and null errorMessage.
+- **Verification:** pnpm verify clean (82/82 tests, 3 new, typecheck, build 270.31 kB).

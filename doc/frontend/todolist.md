@@ -181,3 +181,11 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Tests: 79/79 pass (1 updated component test, 1 updated apiClient test).
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer, 2026-05-31
+
+- [x] Show key_expired specific error message for expired API keys
+  - Branch: `feat/better-error-messages-frontend`
+  - Scope: Add errorMessage field to ReviewTask type. Update ReportPage polling to show "API key 可能超时，请刷新后重试" when errorMessage === 'key_expired', generic message otherwise. Add 3 tests for key_expired, generic failure, and null errorMessage.
+  - Acceptance: Expired key → specific message; other failures → generic message; all 82 tests pass.
+  - Tests: 82/82 pass (3 new).
+  - Owner: frontend-engineer
+  - Signed-off: frontend-engineer, 2026-05-31

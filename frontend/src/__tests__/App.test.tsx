@@ -141,6 +141,69 @@ describe('Review status polling flow', () => {
     expect(getReviewReport).not.toHaveBeenCalled();
   });
 
+  it('shows key_expired specific message for expired API key', async () => {
+    const failedTask: ReviewTask = {
+      ...mockReviewTask,
+      id: 'task-keyexpired',
+      prTitle: '过期密钥任务',
+      status: 'failed',
+      errorMessage: 'key_expired',
+    };
+
+    const getReviewTask = vi.fn(async () => failedTask);
+    const getReviewReport = vi.fn(async () => { throw new Error('should not be called'); });
+
+    renderAt('/reviews/task-keyexpired', {
+      createReviewTask: neverCalled,
+      getReviewTask,
+      getReviewReport,
+    } as never, 0);
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('API key 可能超时，请刷新后重试'));
+  });
+
+  it('shows generic message for non-key-expired failures', async () => {
+    const failedTask: ReviewTask = {
+      ...mockReviewTask,
+      id: 'task-genericfail',
+      prTitle: '一般失败任务',
+      status: 'failed',
+      errorMessage: 'LLM review generation failed.',
+    };
+
+    const getReviewTask = vi.fn(async () => failedTask);
+    const getReviewReport = vi.fn(async () => { throw new Error('should not be called'); });
+
+    renderAt('/reviews/task-genericfail', {
+      createReviewTask: neverCalled,
+      getReviewTask,
+      getReviewReport,
+    } as never, 0);
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Review 分析失败'));
+  });
+
+  it('shows generic message for failed task with null errorMessage', async () => {
+    const failedTask: ReviewTask = {
+      ...mockReviewTask,
+      id: 'task-nullerr',
+      prTitle: '空错误消息任务',
+      status: 'failed',
+      errorMessage: null,
+    };
+
+    const getReviewTask = vi.fn(async () => failedTask);
+    const getReviewReport = vi.fn(async () => { throw new Error('should not be called'); });
+
+    renderAt('/reviews/task-nullerr', {
+      createReviewTask: neverCalled,
+      getReviewTask,
+      getReviewReport,
+    } as never, 0);
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Review 分析失败'));
+  });
+
   it('handles network errors during polling', async () => {
     const getReviewTask = vi.fn(async () => { throw new Error('Network error'); });
 

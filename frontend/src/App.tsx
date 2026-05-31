@@ -644,7 +644,10 @@ function ReportPage({ client, pollIntervalMs = 2_000 }: { client: ReportClientAp
             if (active) setError(e instanceof ApiRequestError ? e.message : '获取报告失败，请稍后重试。');
           }
         } else if (taskData.status === 'failed') {
-          setError('Review 分析失败。任务上下文已保留，可返回重新提交。');
+          const specificMessage = taskData.errorMessage === 'key_expired'
+            ? 'API key 可能超时，请刷新后重试'
+            : 'Review 分析失败。任务上下文已保留，可返回重新提交。';
+          setError(specificMessage);
         } else {
           timer = setTimeout(poll, pollIntervalMs);
         }
