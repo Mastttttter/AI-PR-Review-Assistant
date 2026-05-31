@@ -32,6 +32,10 @@ class LLMQuotaExhaustedError(LLMError):
     pass
 
 
+class LLMAuthError(LLMError):
+    pass
+
+
 def _redact_for_log(text: str, max_length: int = REVIEW_PROMPT_PREVIEW_LENGTH) -> str:
     result = text[:max_length] if len(text) > max_length else text
     suffix = f"... [truncated, total length={len(text)}]" if len(text) > max_length else ""
@@ -133,8 +137,11 @@ class OpenAICompatibleProvider(LLMProvider):
             logger.error("LLM call timed out after %ds", self._timeout)
             raise LLMTimeoutError(f"LLM request timed out after {self._timeout}s")
         except httpx.HTTPStatusError as exc:
-            logger.error("LLM API returned error status %d", exc.response.status_code)
-            raise LLMResponseError(f"LLM API error: {exc.response.status_code}")
+            status_code = exc.response.status_code
+            logger.error("LLM API returned error status %d", status_code)
+            if status_code in (401, 403):
+                raise LLMAuthError(f"LLM authentication failed: {status_code}")
+            raise LLMResponseError(f"LLM API error: {status_code}")
         except httpx.RequestError as exc:
             logger.error("LLM request failed: %s", exc)
             raise LLMResponseError(f"LLM request failed: {exc}")
@@ -192,6 +199,8 @@ class AnthropicLLMProvider(LLMProvider):
         except httpx.HTTPStatusError as exc:
             status_code = exc.response.status_code
             logger.error("Anthropic LLM API returned error status %d", status_code)
+            if status_code in (401, 403):
+                raise LLMAuthError(f"LLM authentication failed: {status_code}")
             if status_code == 429:
                 raise LLMQuotaExhaustedError("LLM quota exhausted: API returned 429 Too Many Requests")
             raise LLMResponseError(f"LLM API error: {status_code}")

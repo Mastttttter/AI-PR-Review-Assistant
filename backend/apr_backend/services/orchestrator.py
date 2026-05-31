@@ -12,7 +12,7 @@ from apr_backend.db.models import ReviewReport, ReviewIssue, ReviewRule, ReviewT
 from apr_backend.db.session import SessionLocal
 from apr_backend.core.config_loader import load_llm_config
 from apr_backend.services.diff_parser import ParsedDiff, parse_diff
-from apr_backend.services.llm_adapter import LLMError, LLMProvider, LLMTimeoutError, create_llm_provider
+from apr_backend.services.llm_adapter import LLMAuthError, LLMError, LLMProvider, LLMTimeoutError, create_llm_provider
 from apr_backend.services.rule_engine import RuleMatch, run_rule_engine
 
 logger = logging.getLogger(__name__)
@@ -223,6 +223,12 @@ def _process_task(db: Session, task: ReviewTask) -> None:
 
     try:
         ai_result = provider.generate_review(prompt)
+    except LLMAuthError:
+        logger.warning("LLM auth failed for task %s", task.id)
+        task.status = TaskStatus.failed
+        task.error_message = "key_expired"
+        db.commit()
+        return
     except LLMError:
         logger.exception("LLM call failed for task %s", task.id)
         task.status = TaskStatus.failed

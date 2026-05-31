@@ -11,6 +11,7 @@ from httpx import Response
 from apr_backend.core.config_loader import load_llm_config
 from apr_backend.core.settings import get_settings
 from apr_backend.services.llm_adapter import (
+    LLMAuthError,
     LLMError,
     LLMQuotaExhaustedError,
     LLMResponseError,
@@ -204,6 +205,18 @@ class TestOpenAICompatibleProvider:
         with pytest.raises(LLMResponseError):
             provider.generate_review(SAMPLE_PROMPT)
 
+    def test_401_raises_llm_auth_error(self, provider, mock_api) -> None:
+        mock_api.post("/chat/completions").mock(return_value=Response(401, json={"error": "unauthorized"}))
+
+        with pytest.raises(LLMAuthError):
+            provider.generate_review(SAMPLE_PROMPT)
+
+    def test_403_raises_llm_auth_error(self, provider, mock_api) -> None:
+        mock_api.post("/chat/completions").mock(return_value=Response(403, json={"error": "forbidden"}))
+
+        with pytest.raises(LLMAuthError):
+            provider.generate_review(SAMPLE_PROMPT)
+
     def test_invalid_json_response_raises_llm_response_error(self, provider, mock_api) -> None:
         mock_api.post("/chat/completions").mock(
             return_value=Response(
@@ -371,6 +384,18 @@ class TestAnthropicLLMProvider:
         mock_api.post("/v1/messages").mock(return_value=Response(500, json={"error": "server error"}))
 
         with pytest.raises(LLMResponseError):
+            provider.generate_review(SAMPLE_PROMPT)
+
+    def test_401_raises_llm_auth_error(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(return_value=Response(401, json={"error": "unauthorized"}))
+
+        with pytest.raises(LLMAuthError):
+            provider.generate_review(SAMPLE_PROMPT)
+
+    def test_403_raises_llm_auth_error(self, provider, mock_api) -> None:
+        mock_api.post("/v1/messages").mock(return_value=Response(403, json={"error": "forbidden"}))
+
+        with pytest.raises(LLMAuthError):
             provider.generate_review(SAMPLE_PROMPT)
 
     def test_quota_exhausted_raises_llm_quota_exhausted_error(self, provider, mock_api) -> None:
@@ -651,3 +676,7 @@ class TestLLMErrorHierarchy:
     def test_quota_exhausted_error_is_llm_error(self) -> None:
         with pytest.raises(LLMError):
             raise LLMQuotaExhaustedError("quota")
+
+    def test_auth_error_is_llm_error(self) -> None:
+        with pytest.raises(LLMError):
+            raise LLMAuthError("auth")
