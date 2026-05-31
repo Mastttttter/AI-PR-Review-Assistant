@@ -43,6 +43,7 @@ function renderForm(createReviewTask = vi.fn<(_: CreateReviewTaskRequest) => Pro
     getSettings: neverSettings,
     updateSettings: neverSettings,
     testSettingsConnection: neverSettings,
+    fetchDispatcherCredentials: neverSettings,
   };
   render(
     <MemoryRouter initialEntries={['/reviews/new']}>

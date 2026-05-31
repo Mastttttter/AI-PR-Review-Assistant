@@ -155,3 +155,13 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Tests: 72/72 pass (3 updated, 1 new report test).
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer, 2026-05-30
+
+## API Dispatcher Settings Integration
+
+- [x] Add dispatcher credential fetch section to SettingsPage
+  - Branch: `feat/dispatcher-settings-ui`
+  - Scope: Add dispatcher credential fetch section to SettingsPage with toggle, URL input, fetch button, read-only result fields, and auto-fill of active provider.
+  - Acceptance: Users can fetch temporary credentials from a dispatcher server; mock mode hides section; succeed/error/loading states handled; active provider fields auto-filled; expiry shown in minutes.
+  - Tests: 79/79 pass (7 new: 2 API client, 5 component).
+  - Owner: frontend-engineer
+  - Signed-off: frontend-engineer, 2026-05-31
