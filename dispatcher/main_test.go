@@ -1,64 +1,51 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/sdk/config"
+
+	"github.com/apr-review/dispatcher/tempkey"
 )
 
-func setupRouter() *gin.Engine {
+func setupTestRouter(t *testing.T) (*gin.Engine, *tempkey.Provider) {
+	t.Helper()
 	gin.SetMode(gin.TestMode)
 
-	port := os.Getenv("DISPATCHER_PORT")
-	if port == "" {
-		port = "8318"
-	}
+	prov := tempkey.NewProvider(10 * time.Minute)
 
-	baseURL := os.Getenv("DISPATCHER_LLM_BASE_URL")
-	if baseURL == "" {
-		baseURL = "https://api.openai.com/v1"
-	}
-
-	model := os.Getenv("DISPATCHER_LLM_MODEL")
-	if model == "" {
-		model = "gpt-4o-mini"
-	}
-
-	r := gin.Default()
-
+	r := gin.New()
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
-
 	r.POST("/api/issue-key", func(c *gin.Context) {
-		key, expiresIn := issueKey(10 * time.Minute)
+		key := generateKey()
+		prov.IssueKey(key)
 		c.JSON(http.StatusOK, gin.H{
 			"api_key":    key,
-			"base_uri":   fmt.Sprintf("http://dispatcher:%s", port),
-			"model":      model,
-			"expires_in": int(expiresIn.Seconds()),
+			"base_uri":   "http://127.0.0.1:18318",
+			"model":      "gpt-4o-mini",
+			"expires_in": 600,
 		})
 	})
 
-	_ = baseURL
-
-	return r
+	return r, prov
 }
 
 func TestHealthEndpoint(t *testing.T) {
-	router := setupRouter()
+	r, _ := setupTestRouter(t)
 
 	req := httptest.NewRequest("GET", "/health", nil)
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d", w.Code)
@@ -72,11 +59,11 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestIssueKeyReturnsValidResponse(t *testing.T) {
-	router := setupRouter()
+	r, _ := setupTestRouter(t)
 
 	req := httptest.NewRequest("POST", "/api/issue-key", nil)
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d", w.Code)
@@ -97,8 +84,8 @@ func TestIssueKeyReturnsValidResponse(t *testing.T) {
 		t.Fatalf("expected 32 hex chars after prefix, got %d chars", len(hexPart))
 	}
 
-	if body["base_uri"] != "http://dispatcher:8318" {
-		t.Fatalf("expected base_uri 'http://dispatcher:8318', got '%v'", body["base_uri"])
+	if body["base_uri"] != "http://127.0.0.1:18318" {
+		t.Fatalf("expected base_uri 'http://127.0.0.1:18318', got '%v'", body["base_uri"])
 	}
 
 	if body["model"] != "gpt-4o-mini" {
@@ -112,11 +99,11 @@ func TestIssueKeyReturnsValidResponse(t *testing.T) {
 }
 
 func TestKeyRotation(t *testing.T) {
-	router := setupRouter()
+	r, prov := setupTestRouter(t)
 
 	req1 := httptest.NewRequest("POST", "/api/issue-key", nil)
 	w1 := httptest.NewRecorder()
-	router.ServeHTTP(w1, req1)
+	r.ServeHTTP(w1, req1)
 
 	var body1 map[string]interface{}
 	json.Unmarshal(w1.Body.Bytes(), &body1)
@@ -124,7 +111,7 @@ func TestKeyRotation(t *testing.T) {
 
 	req2 := httptest.NewRequest("POST", "/api/issue-key", nil)
 	w2 := httptest.NewRecorder()
-	router.ServeHTTP(w2, req2)
+	r.ServeHTTP(w2, req2)
 
 	var body2 map[string]interface{}
 	json.Unmarshal(w2.Body.Bytes(), &body2)
@@ -134,13 +121,14 @@ func TestKeyRotation(t *testing.T) {
 		t.Fatal("expected different keys for sequential calls (rotation)")
 	}
 
-	if w1.Code != http.StatusOK || w2.Code != http.StatusOK {
-		t.Fatal("both calls should return 200")
+	// Verify the first key was destroyed by rotation
+	if !prov.IsExpired(key1) {
+		t.Fatal("first key should be expired after rotation")
 	}
 }
 
 func TestConcurrentAccess(t *testing.T) {
-	router := setupRouter()
+	r, _ := setupTestRouter(t)
 
 	var wg sync.WaitGroup
 	keys := make([]string, 0, 50)
@@ -152,7 +140,7 @@ func TestConcurrentAccess(t *testing.T) {
 			defer wg.Done()
 			req := httptest.NewRequest("POST", "/api/issue-key", nil)
 			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
+			r.ServeHTTP(w, req)
 
 			if w.Code != http.StatusOK {
 				t.Errorf("concurrent request returned %d", w.Code)
@@ -172,33 +160,65 @@ func TestConcurrentAccess(t *testing.T) {
 	if len(keys) != 50 {
 		t.Fatalf("expected 50 keys, got %d", len(keys))
 	}
+}
 
-	seen := make(map[string]bool)
-	for _, k := range keys {
-		if seen[k] {
-			t.Logf("key collision found (expected due to rotation): %s", k)
-		}
-		seen[k] = true
+func TestExpiredKeyRejection(t *testing.T) {
+	shortProv := tempkey.NewProvider(1 * time.Millisecond)
+	shortProv.IssueKey("tmp-short-lived")
+
+	time.Sleep(10 * time.Millisecond)
+
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("Authorization", "Bearer tmp-short-lived")
+	_, err := shortProv.Authenticate(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected auth error for expired key")
 	}
 }
 
-func TestMissingAPIKeyCausesError(t *testing.T) {
-	// Simulate by calling an os.Exit test via subprocess
-	// For unit test, we test the logic directly: check that the env check works
-	// We cannot easily test os.Exit in-process, but we verify the check code path
-
-	oldVal := os.Getenv("DISPATCHER_LLM_API_KEY")
-	os.Unsetenv("DISPATCHER_LLM_API_KEY")
-	defer os.Setenv("DISPATCHER_LLM_API_KEY", oldVal)
-
-	val := os.Getenv("DISPATCHER_LLM_API_KEY")
-	if val != "" {
-		t.Fatal("DISPATCHER_LLM_API_KEY should be empty after unsetting")
+func TestMissingConfigError(t *testing.T) {
+	_, err := config.LoadConfig("/nonexistent/path/config.yaml")
+	if err == nil {
+		t.Fatal("expected error loading non-existent config")
 	}
+}
 
-	// Verify the check would fire: this is the same check in main()
-	if val == "" {
-		// This is the expected behavior for missing API key
-		t.Log("Verified: missing DISPATCHER_LLM_API_KEY is detected")
+func TestGenerateKeyUniqueness(t *testing.T) {
+	seen := make(map[string]bool)
+	for i := 0; i < 100; i++ {
+		key := generateKey()
+		if seen[key] {
+			t.Fatal("generateKey produced duplicate key")
+		}
+		seen[key] = true
+		if !strings.HasPrefix(key, "tmp-") {
+			t.Fatalf("key should start with 'tmp-', got '%s'", key)
+		}
+	}
+}
+
+func TestEnvModelDefaults(t *testing.T) {
+	// With env var
+	t.Setenv("DISPATCHER_LLM_MODEL", "custom-model")
+	cfg := &config.Config{}
+	result := envModel(cfg)
+	if result != "custom-model" {
+		t.Fatalf("expected env model 'custom-model', got '%s'", result)
+	}
+}
+
+func TestEnvModelFallbackToConfig(t *testing.T) {
+	// Without env var, should use first model from config
+	cfg := &config.Config{}
+	cfg.OpenAICompatibility = []config.OpenAICompatibility{
+		{
+			Models: []config.OpenAICompatibilityModel{
+				{Name: "claude-opus"},
+			},
+		},
+	}
+	result := envModel(cfg)
+	if result != "claude-opus" {
+		t.Fatalf("expected config model 'claude-opus', got '%s'", result)
 	}
 }

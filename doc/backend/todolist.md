@@ -199,6 +199,20 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-31
 
+- [x] Rebuild Go dispatcher using CLIProxyAPI SDK
+  - Scope: Replace standalone gin server with CLIProxyAPI SDK-based service. Add config.yaml/openai-compatibility, custom sdk/access Provider for temp key management (Bearer/X-Api-Key/?key=), and /api/issue-key route via WithRouterConfigurator. Config via DISPATCHER_KEY_TTL env var (default 600s).
+  - Acceptance: CLIProxyAPI service starts with config.yaml; /api/issue-key returns valid credentials; key rotation works; temp keys authenticate via dispatcher proxy; /health returns 200.
+  - Tests: 21/21 passing (9 main: health, issue-key, rotation, concurrent, expired key, config error, key uniqueness, env model with/without config; 12 tempkey: 3 auth methods, invalid key, expired key, no credentials, rotation, expiry, concurrent, identifier, non-temp key, default TTL).
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-31
+
+- [x] Update Python dispatcher-fetch to use dispatcher base_uri
+  - Scope: Remove base_uri override in POST /api/settings/dispatcher-fetch — use data["base_uri"] from dispatcher response directly instead of user-provided URL. Update test assertions to match.
+  - Acceptance: base_uri in response is the dispatcher's base_uri, not the user-provided URL.
+  - Tests: 323/323 passing (6 dispatcher-fetch tests updated: success uses dispatcher base_uri, renamed test verifies dispatcher response field used).
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-31
+
 - [x] Add dispatcher-fetch endpoint to settings API
   - Scope: Add POST /api/settings/dispatcher-fetch that accepts a dispatcher URL, calls POST {url}/api/issue-key via httpx, overrides base_uri with user-provided URL, and returns credentials. Handle connection errors and timeouts as 502.
   - Acceptance: Frontend can fetch credentials from dispatcher; unreachable returns 502; timeout handled; base_uri overridden.

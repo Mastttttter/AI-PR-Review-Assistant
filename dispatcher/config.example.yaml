@@ -1,0 +1,16 @@
+# Dispatcher server configuration template
+# Copy to config.yaml and fill in your real credentials.
+
+port: 8318
+
+api-keys:
+  - "static-admin-key"
+
+openai-compatibility:
+  - name: "dispatcher-llm"
+    base-url: "https://api.openai.com/v1"
+    api-key-entries:
+      - api-key: "sk-your-api-key-here"
+    models:
+      - name: "gpt-4o-mini"
+        alias: "gpt-4o-mini"

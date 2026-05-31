@@ -1,87 +1,106 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"sync"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
-)
+	sdkaccess "github.com/router-for-me/CLIProxyAPI/v7/sdk/access"
+	sdkapi "github.com/router-for-me/CLIProxyAPI/v7/sdk/api"
+	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
+	"github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy"
+	"github.com/router-for-me/CLIProxyAPI/v7/sdk/config"
 
-type apiKey struct {
-	Key       string
-	ExpiresAt time.Time
-}
-
-var (
-	mu        sync.Mutex
-	currentKey *apiKey
+	"github.com/apr-review/dispatcher/tempkey"
 )
 
 func main() {
-	apiKeyEnv := os.Getenv("DISPATCHER_LLM_API_KEY")
-	if apiKeyEnv == "" {
-		log.Fatal("DISPATCHER_LLM_API_KEY environment variable is required but not set")
+	keyTTL := envInt("DISPATCHER_KEY_TTL", 600)
+	prov := tempkey.NewProvider(keyTTL)
+
+	cfg, err := config.LoadConfig("config.yaml")
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	baseURL := os.Getenv("DISPATCHER_LLM_BASE_URL")
-	if baseURL == "" {
-		baseURL = "https://api.openai.com/v1"
+	if envPort := os.Getenv("DISPATCHER_PORT"); envPort != "" {
+		if p, err := strconv.Atoi(envPort); err == nil {
+			cfg.Port = p
+		}
 	}
 
-	model := os.Getenv("DISPATCHER_LLM_MODEL")
-	if model == "" {
-		model = "gpt-4o-mini"
+	model := envModel(cfg)
+
+	accessMgr := sdkaccess.NewManager()
+	sdkaccess.RegisterProvider(prov.Identifier(), prov)
+	accessMgr.SetProviders(sdkaccess.RegisteredProviders())
+
+	svc, err := cliproxy.NewBuilder().
+		WithConfig(cfg).
+		WithConfigPath("config.yaml").
+		WithRequestAccessManager(accessMgr).
+		WithServerOptions(
+			sdkapi.WithRouterConfigurator(func(e *gin.Engine, _ *handlers.BaseAPIHandler, _ *config.Config) {
+				e.GET("/health", func(c *gin.Context) {
+					c.JSON(http.StatusOK, gin.H{"status": "ok"})
+				})
+				e.POST("/api/issue-key", func(c *gin.Context) {
+					key := generateKey()
+					prov.IssueKey(key)
+					c.JSON(http.StatusOK, gin.H{
+						"api_key":    key,
+						"base_uri":   fmt.Sprintf("http://127.0.0.1:%d", cfg.Port),
+						"model":      model,
+						"expires_in": int(keyTTL.Seconds()),
+					})
+				})
+			}),
+		).
+		Build()
+	if err != nil {
+		log.Fatalf("Failed to build service: %v", err)
 	}
 
-	port := os.Getenv("DISPATCHER_PORT")
-	if port == "" {
-		port = "8318"
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	r := gin.Default()
-
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
-
-	r.POST("/api/issue-key", func(c *gin.Context) {
-		key, expiresIn := issueKey(10 * time.Minute)
-		c.JSON(http.StatusOK, gin.H{
-			"api_key":    key,
-			"base_uri":   fmt.Sprintf("http://dispatcher:%s", port),
-			"model":      model,
-			"expires_in": int(expiresIn.Seconds()),
-		})
-	})
-
-	log.Printf("Starting dispatcher server on port %s", port)
-	if err := r.Run(":" + port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+	log.Printf("Starting dispatcher server on port %d", cfg.Port)
+	if err := svc.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		log.Fatalf("Server error: %v", err)
 	}
 }
 
-func issueKey(ttl time.Duration) (string, time.Duration) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	now := time.Now()
-	if currentKey != nil && now.Before(currentKey.ExpiresAt) {
-		currentKey = nil
+func envModel(cfg *config.Config) string {
+	if m := os.Getenv("DISPATCHER_LLM_MODEL"); m != "" {
+		return m
 	}
+	if len(cfg.OpenAICompatibility) > 0 && len(cfg.OpenAICompatibility[0].Models) > 0 {
+		return cfg.OpenAICompatibility[0].Models[0].Name
+	}
+	return "gpt-4o-mini"
+}
 
+func envInt(key string, defaultVal int) time.Duration {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return time.Duration(n) * time.Second
+		}
+	}
+	return time.Duration(defaultVal) * time.Second
+}
+
+func generateKey() string {
 	raw := make([]byte, 16)
 	if _, err := rand.Read(raw); err != nil {
 		panic(fmt.Sprintf("failed to generate random key: %v", err))
 	}
-	key := "tmp-" + hex.EncodeToString(raw)
-	expiresAt := now.Add(ttl)
-	currentKey = &apiKey{Key: key, ExpiresAt: expiresAt}
-
-	return key, ttl
+	return "tmp-" + hex.EncodeToString(raw)
 }

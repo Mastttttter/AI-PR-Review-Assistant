@@ -151,7 +151,7 @@ def dispatcher_fetch(payload: DispatcherFetchRequest, demo_owner: DemoOwnerHeade
     data = response.json()
     return DispatcherFetchResponse(
         api_key=data["api_key"],
-        base_uri=payload.url.rstrip("/"),
+        base_uri=data["base_uri"],
         model=data["model"],
         expires_in=data["expires_in"],
     )
