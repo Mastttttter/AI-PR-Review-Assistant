@@ -189,3 +189,12 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Tests: 317/317 passing (5 new: 2 PR fetch, 2 review task lifecycle, 1 report).
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-30
+
+## Dispatcher server
+
+- [x] Create Go API dispatcher server in dispatcher/
+  - Scope: Build a Go HTTP server using gin-gonic/gin with POST /api/issue-key (generates tmp-prefixed API keys with 10-min TTL, key rotation, thread-safe) and GET /health endpoints. Configure via DISPATCHER_LLM_API_KEY (required), DISPATCHER_LLM_BASE_URL, DISPATCHER_LLM_MODEL, DISPATCHER_PORT env vars.
+  - Acceptance: Server starts and /health returns 200; /api/issue-key returns valid credentials; second call within 10 minutes returns different key (rotation); concurrent requests handled safely; missing API key causes startup error.
+  - Tests: 5/5 passing (health endpoint, issue-key response structure, key rotation, concurrent access safety, missing API key detection).
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-31
