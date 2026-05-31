@@ -219,3 +219,10 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Tests: 6/6 passing (success, base_uri override, connection error 502, timeout 502, non-200 502, owner header required).
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-31
+
+- [x] Dual-model response and config template for dispatcher
+  - Scope: Return both openai_model and anthropic_model in /api/issue-key response. Add envAnthropicModel() with DISPATCHER_ANTHROPIC_MODEL env var and claude-api-key config fallback. Rename envModel to envOpenAIModel. Update config.example.yaml with both provider sections (openai-compatibility, claude-api-key). Backward compat model field preserved.
+  - Acceptance: /api/issue-key returns openai_model and anthropic_model; config.example.yaml shows both providers; all Go tests pass.
+  - Tests: 24/24 passing (12 main: +3 anthropic model tests, +2 response field assertions, renamed 2 openai model tests; 12 tempkey unchanged).
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-31

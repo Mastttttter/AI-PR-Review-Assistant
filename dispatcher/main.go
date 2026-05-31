@@ -37,7 +37,8 @@ func main() {
 		}
 	}
 
-	model := envModel(cfg)
+	model := envOpenAIModel(cfg)
+	anthropicModel := envAnthropicModel(cfg)
 
 	accessMgr := sdkaccess.NewManager()
 	sdkaccess.RegisterProvider(prov.Identifier(), prov)
@@ -56,10 +57,12 @@ func main() {
 					key := generateKey()
 					prov.IssueKey(key)
 					c.JSON(http.StatusOK, gin.H{
-						"api_key":    key,
-						"base_uri":   fmt.Sprintf("http://127.0.0.1:%d", cfg.Port),
-						"model":      model,
-						"expires_in": int(keyTTL.Seconds()),
+						"api_key":         key,
+						"base_uri":        fmt.Sprintf("http://127.0.0.1:%d", cfg.Port),
+						"model":           model,
+						"openai_model":    model,
+						"anthropic_model": anthropicModel,
+						"expires_in":      int(keyTTL.Seconds()),
 					})
 				})
 			}),
@@ -78,7 +81,7 @@ func main() {
 	}
 }
 
-func envModel(cfg *config.Config) string {
+func envOpenAIModel(cfg *config.Config) string {
 	if m := os.Getenv("DISPATCHER_LLM_MODEL"); m != "" {
 		return m
 	}
@@ -86,6 +89,16 @@ func envModel(cfg *config.Config) string {
 		return cfg.OpenAICompatibility[0].Models[0].Name
 	}
 	return "gpt-4o-mini"
+}
+
+func envAnthropicModel(cfg *config.Config) string {
+	if m := os.Getenv("DISPATCHER_ANTHROPIC_MODEL"); m != "" {
+		return m
+	}
+	if len(cfg.ClaudeKey) > 0 && len(cfg.ClaudeKey[0].Models) > 0 {
+		return cfg.ClaudeKey[0].Models[0].Name
+	}
+	return ""
 }
 
 func envInt(key string, defaultVal int) time.Duration {

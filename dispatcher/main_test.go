@@ -30,10 +30,12 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *tempkey.Provider) {
 		key := generateKey()
 		prov.IssueKey(key)
 		c.JSON(http.StatusOK, gin.H{
-			"api_key":    key,
-			"base_uri":   "http://127.0.0.1:18318",
-			"model":      "gpt-4o-mini",
-			"expires_in": 600,
+			"api_key":         key,
+			"base_uri":        "http://127.0.0.1:18318",
+			"model":           "gpt-4o-mini",
+			"openai_model":    "gpt-4o-mini",
+			"anthropic_model": "claude-sonnet-4-6",
+			"expires_in":      600,
 		})
 	})
 
@@ -90,6 +92,14 @@ func TestIssueKeyReturnsValidResponse(t *testing.T) {
 
 	if body["model"] != "gpt-4o-mini" {
 		t.Fatalf("expected model 'gpt-4o-mini', got '%v'", body["model"])
+	}
+
+	if body["openai_model"] != "gpt-4o-mini" {
+		t.Fatalf("expected openai_model 'gpt-4o-mini', got '%v'", body["openai_model"])
+	}
+
+	if body["anthropic_model"] != "claude-sonnet-4-6" {
+		t.Fatalf("expected anthropic_model 'claude-sonnet-4-6', got '%v'", body["anthropic_model"])
 	}
 
 	ei, ok := body["expires_in"].(float64)
@@ -197,18 +207,16 @@ func TestGenerateKeyUniqueness(t *testing.T) {
 	}
 }
 
-func TestEnvModelDefaults(t *testing.T) {
-	// With env var
+func TestEnvOpenAIModelDefaults(t *testing.T) {
 	t.Setenv("DISPATCHER_LLM_MODEL", "custom-model")
 	cfg := &config.Config{}
-	result := envModel(cfg)
+	result := envOpenAIModel(cfg)
 	if result != "custom-model" {
 		t.Fatalf("expected env model 'custom-model', got '%s'", result)
 	}
 }
 
-func TestEnvModelFallbackToConfig(t *testing.T) {
-	// Without env var, should use first model from config
+func TestEnvOpenAIModelFallbackToConfig(t *testing.T) {
 	cfg := &config.Config{}
 	cfg.OpenAICompatibility = []config.OpenAICompatibility{
 		{
@@ -217,8 +225,45 @@ func TestEnvModelFallbackToConfig(t *testing.T) {
 			},
 		},
 	}
-	result := envModel(cfg)
+	result := envOpenAIModel(cfg)
 	if result != "claude-opus" {
 		t.Fatalf("expected config model 'claude-opus', got '%s'", result)
+	}
+}
+
+func TestEnvAnthropicModelDefaults(t *testing.T) {
+	t.Setenv("DISPATCHER_ANTHROPIC_MODEL", "custom-claude")
+	cfg := &config.Config{}
+	result := envAnthropicModel(cfg)
+	if result != "custom-claude" {
+		t.Fatalf("expected env model 'custom-claude', got '%s'", result)
+	}
+}
+
+func TestEnvAnthropicModelFallbackToConfig(t *testing.T) {
+	cfgData := []byte(`
+port: 8318
+api-keys: ["test-key"]
+claude-api-key:
+  - api-key: "sk-test"
+    models:
+      - name: "claude-opus-4-7"
+        alias: "claude-opus"
+`)
+	cfg, err := config.ParseConfigBytes(cfgData)
+	if err != nil {
+		t.Fatalf("failed to parse config: %v", err)
+	}
+	result := envAnthropicModel(cfg)
+	if result != "claude-opus-4-7" {
+		t.Fatalf("expected config model 'claude-opus-4-7', got '%s'", result)
+	}
+}
+
+func TestEnvAnthropicModelReturnsEmptyWhenNoConfig(t *testing.T) {
+	cfg := &config.Config{}
+	result := envAnthropicModel(cfg)
+	if result != "" {
+		t.Fatalf("expected empty string for no config, got '%s'", result)
 	}
 }
