@@ -415,6 +415,8 @@ class TestDispatcherFetch:
         "api_key": "tmp-a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
         "base_uri": "http://dispatcher:8318",
         "model": "gpt-4o-mini",
+        "openai_model": "gpt-4o-mini",
+        "anthropic_model": "claude-sonnet-4-6",
         "expires_in": 600,
     }
 
@@ -433,6 +435,8 @@ class TestDispatcherFetch:
             body = response.json()
             assert body["api_key"] == self.DISPATCHER_RESPONSE["api_key"]
             assert body["model"] == self.DISPATCHER_RESPONSE["model"]
+            assert body["openai_model"] == self.DISPATCHER_RESPONSE["openai_model"]
+            assert body["anthropic_model"] == self.DISPATCHER_RESPONSE["anthropic_model"]
             assert body["expires_in"] == self.DISPATCHER_RESPONSE["expires_in"]
             assert body["base_uri"] == self.DISPATCHER_RESPONSE["base_uri"]
 

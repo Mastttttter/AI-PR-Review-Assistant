@@ -56,6 +56,8 @@ class DispatcherFetchResponse(BaseModel):
     api_key: str
     base_uri: str
     model: str
+    openai_model: str
+    anthropic_model: str = ""
     expires_in: int
 
 
@@ -152,6 +154,8 @@ def dispatcher_fetch(payload: DispatcherFetchRequest, demo_owner: DemoOwnerHeade
     return DispatcherFetchResponse(
         api_key=data["api_key"],
         base_uri=data["base_uri"],
-        model=data["model"],
+        model=data.get("model", data.get("openai_model", "")),
+        openai_model=data.get("openai_model", data.get("model", "")),
+        anthropic_model=data.get("anthropic_model", ""),
         expires_in=data["expires_in"],
     )
