@@ -1,16 +1,35 @@
 # Dispatcher server configuration template
 # Copy to config.yaml and fill in your real credentials.
+#
+# Environment variables:
+#   DISPATCHER_PORT             - Override server port (default: 8318)
+#   DISPATCHER_LLM_MODEL        - Override OpenAI model name
+#   DISPATCHER_ANTHROPIC_MODEL  - Override Anthropic model name
+#   DISPATCHER_KEY_TTL          - Temp key TTL in seconds (default: 600)
 
+# Server port
 port: 8318
 
+# Directory for authentication token files (default: ~/.cli-proxy-api)
+auth-dir: "./auths"
+
+# Static API keys for client access
 api-keys:
   - "static-admin-key"
 
-openai-compatibility:
-  - name: "dispatcher-llm"
-    base-url: "https://api.openai.com/v1"
-    api-key-entries:
-      - api-key: "sk-your-api-key-here"
-    models:
-      - name: "gpt-4o-mini"
-        alias: "gpt-4o-mini"
+# OpenAI-compatible provider (for OpenAI and compatible APIs)
+# openai-compatibility:
+#   - name: "my-openai"
+#     base-url: "https://api.openai.com/v1"
+#     api-key-entries:
+#       - api-key: "sk-your-openai-api-key"
+#     models:
+#       - name: "gpt-4o-mini"
+#         alias: "gpt-4o-mini"
+
+# Anthropic/Claude provider (for Anthropic-compatible APIs)
+# claude-api-key:
+#   - api-key: "sk-ant-your-claude-api-key"
+#     models:
+#       - name: "claude-sonnet-4-6"
+#         alias: "claude-sonnet-4-6"
