@@ -165,3 +165,11 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Tests: 79/79 pass (7 new: 2 API client, 5 component).
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer, 2026-05-31
+
+- [x] Fix dispatcher auto-fill to always target OpenAI provider
+  - Branch: `feat/dispatcher-autofill-openai`
+  - Scope: Change handleDispatcherFetch to always auto-fill the OpenAI provider regardless of active tab, since the dispatcher issues OpenAI-compatible credentials. Update test to verify OpenAI is populated even when Anthropic is active, and Anthropic inputs remain unchanged.
+  - Acceptance: Dispatcher fetch always fills OpenAI fields; Anthropic fields stay at defaults when Anthropic tab is active.
+  - Tests: 79/79 pass (1 updated test).
+  - Owner: frontend-engineer
+  - Signed-off: frontend-engineer, 2026-05-31

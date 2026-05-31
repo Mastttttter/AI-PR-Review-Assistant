@@ -451,3 +451,8 @@ Verification:
 
 - **Scope:** Added collapsible "从 API 分发器获取凭证" section to SettingsPage. Visible only in real API mode. Includes URL input, fetch button, 3 read-only result fields (masked API key, base URI, model), and expiry badge in minutes. On success, auto-fills the active provider's configuration fields.
 - **Verification:** pnpm verify clean (79/79 tests, 7 new). Browser validation: all 6 scenarios pass including error handling, loading state, and end-to-end fetch with Go dispatcher server.
+
+### Fix dispatcher auto-fill to always target OpenAI provider (2026-05-31)
+
+- **Scope:** Changed handleDispatcherFetch to always auto-fill the OpenAI provider regardless of which provider tab is active, since the dispatcher issues OpenAI-compatible credentials. Updated test to verify OpenAI is populated when Anthropic tab is active and Anthropic inputs remain at defaults.
+- **Verification:** pnpm verify clean (79/79 tests, typecheck, build 269.94 kB).
