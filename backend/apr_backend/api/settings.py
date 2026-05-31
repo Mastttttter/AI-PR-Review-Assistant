@@ -110,7 +110,7 @@ def test_settings_connection(payload: TestRequest, demo_owner: DemoOwnerHeader) 
             "Content-Type": "application/json",
         }
     else:
-        url = f"{base_uri}/chat/completions"
+        url = f"{base_uri}/v1/chat/completions"
         req_body = {
             "model": payload.model,
             "messages": [{"role": "user", "content": "Hi"}],
