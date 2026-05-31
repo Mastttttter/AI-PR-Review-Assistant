@@ -256,6 +256,8 @@ describe('ApiClient', () => {
       api_key: 'sk-dispatcher-key-001',
       base_uri: 'https://api.openai.com/v1',
       model: 'gpt-4o',
+      openai_model: 'gpt-4o',
+      anthropic_model: 'claude-sonnet-4-6',
       expires_in: 3600,
     }));
     const client = new ApiClient({ baseUrl: '/api', fetcher });
@@ -266,6 +268,8 @@ describe('ApiClient', () => {
       apiKey: 'sk-dispatcher-key-001',
       baseUri: 'https://api.openai.com/v1',
       model: 'gpt-4o',
+      openaiModel: 'gpt-4o',
+      anthropicModel: 'claude-sonnet-4-6',
       expiresIn: 3600,
     } satisfies DispatcherFetchResponse);
     expect(fetcher).toHaveBeenCalledWith('/api/settings/dispatcher-fetch', expect.objectContaining({

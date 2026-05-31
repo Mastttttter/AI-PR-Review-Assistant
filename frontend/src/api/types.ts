@@ -187,5 +187,7 @@ export interface DispatcherFetchResponse {
   apiKey: string;
   baseUri: string;
   model: string;
+  openaiModel: string;
+  anthropicModel: string;
   expiresIn: number;
 }

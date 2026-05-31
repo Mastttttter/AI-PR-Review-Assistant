@@ -173,3 +173,11 @@ Chief engineer writes tasks. Frontend engineer updates completed items after imp
   - Tests: 79/79 pass (1 updated test).
   - Owner: frontend-engineer
   - Signed-off: frontend-engineer, 2026-05-31
+
+- [x] Auto-fill both providers on dispatcher credential fetch
+  - Branch: `feat/dispatcher-autofill-both`
+  - Scope: Update handleDispatcherFetch to fill both OpenAI and Anthropic with shared baseUri/apiKey and per-provider models (openaiModel, anthropicModel). Result display shows both model rows. Types and tests updated.
+  - Acceptance: Both provider sections auto-filled; each gets correct model; result display shows both models.
+  - Tests: 79/79 pass (1 updated component test, 1 updated apiClient test).
+  - Owner: frontend-engineer
+  - Signed-off: frontend-engineer, 2026-05-31

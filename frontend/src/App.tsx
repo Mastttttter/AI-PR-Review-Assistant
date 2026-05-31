@@ -1016,8 +1016,8 @@ function SettingsPage({ client }: { client: SettingsClientApi }) {
     try {
       const result: DispatcherFetchResponse = await client.fetchDispatcherCredentials(dispatcherUrl.trim());
       setDispatcherResult(result);
-      // Dispatcher issues OpenAI-compatible credentials — always fill OpenAI provider
-      setOpenai((prev) => ({ ...prev, baseUri: result.baseUri, apiKey: result.apiKey, model: result.model }));
+      setOpenai((prev) => ({ ...prev, baseUri: result.baseUri, apiKey: result.apiKey, model: result.openaiModel }));
+      setAnthropic((prev) => ({ ...prev, baseUri: result.baseUri, apiKey: result.apiKey, model: result.anthropicModel }));
       setSaved(false);
     } catch (e) {
       setDispatcherError(e instanceof ApiRequestError ? e.message : '获取凭证失败，请稍后重试。');
@@ -1204,10 +1204,18 @@ function SettingsPage({ client }: { client: SettingsClientApi }) {
                           <span>Base URI</span>
                           <input readOnly value={dispatcherResult.baseUri} />
                         </label>
-                        <label className="form-field">
-                          <span>Model</span>
-                          <input readOnly value={dispatcherResult.model} />
-                        </label>
+                        {dispatcherResult.openaiModel ? (
+                          <label className="form-field">
+                            <span>OpenAI Model</span>
+                            <input readOnly value={dispatcherResult.openaiModel} />
+                          </label>
+                        ) : null}
+                        {dispatcherResult.anthropicModel ? (
+                          <label className="form-field">
+                            <span>Anthropic Model</span>
+                            <input readOnly value={dispatcherResult.anthropicModel} />
+                          </label>
+                        ) : null}
                         <span className="test-result-badge test-success">
                           凭证有效，剩余 {Math.round(dispatcherResult.expiresIn / 60)} 分钟
                         </span>

@@ -375,7 +375,7 @@ describe('Settings page', () => {
     getSettings: () => Promise<SettingsResponse>;
     updateSettings: (req: SettingsResponse) => Promise<SettingsResponse>;
     testSettingsConnection: () => Promise<{ success: boolean; message: string }>;
-    fetchDispatcherCredentials: (url: string) => Promise<{ apiKey: string; baseUri: string; model: string; expiresIn: number }>;
+    fetchDispatcherCredentials: (url: string) => Promise<{ apiKey: string; baseUri: string; model: string; openaiModel: string; anthropicModel: string; expiresIn: number }>;
   }> = {}) {
     return {
       createReviewTask: async () => { throw new Error('should not be called'); },
@@ -587,9 +587,9 @@ describe('Settings page', () => {
     await waitFor(() => expect(screen.queryByText('获取凭证')).not.toBeInTheDocument());
   });
 
-  it('always auto-fills OpenAI provider regardless of active tab', async () => {
+  it('auto-fills both provider fields and shows result on dispatcher success', async () => {
     const fetchDispatcherCredentials = vi.fn(async () => ({
-      apiKey: 'sk-new-key', baseUri: 'https://new.example.com', model: 'gpt-5', expiresIn: 600,
+      apiKey: 'sk-new-key', baseUri: 'https://new.example.com', model: 'gpt-5', openaiModel: 'gpt-5', anthropicModel: 'claude-opus-5', expiresIn: 600,
     }));
     const anthropicActiveSettings = { ...realSettings, activeProvider: 'anthropic' as const };
     renderAt('/settings', settingsClient({ getSettings: async () => anthropicActiveSettings, fetchDispatcherCredentials }));
@@ -603,23 +603,22 @@ describe('Settings page', () => {
     await waitFor(() => expect(fetchDispatcherCredentials).toHaveBeenCalledWith('https://dispatcher.example.com/keys'));
     await waitFor(() => expect(screen.getByText('凭证有效，剩余 10 分钟')).toBeInTheDocument());
     expect(screen.getByText('临时 API Key')).toBeInTheDocument();
-    // OpenAI inputs are auto-filled (values also in read-only result fields)
+    expect(screen.getByText('OpenAI Model')).toBeInTheDocument();
+    expect(screen.getByText('Anthropic Model')).toBeInTheDocument();
+    // Check auto-filled OpenAI and Anthropic provider inputs (values also in read-only result fields)
     const baseUriInputs = screen.getAllByDisplayValue('https://new.example.com');
-    expect(baseUriInputs.length).toBe(2); // read-only result + OpenAI provider input
-    const modelInputs = screen.getAllByDisplayValue('gpt-5');
-    expect(modelInputs.length).toBe(2); // read-only result + OpenAI provider input
+    expect(baseUriInputs.length).toBe(3); // read-only result + OpenAI input + Anthropic input
+    const openaiModelInputs = screen.getAllByDisplayValue('gpt-5');
+    expect(openaiModelInputs.length).toBe(2); // read-only result + OpenAI input
+    const anthropicModelInputs = screen.getAllByDisplayValue('claude-opus-5');
+    expect(anthropicModelInputs.length).toBe(2); // read-only result + Anthropic input
     const keyInputs = screen.getAllByDisplayValue('****-key');
-    expect(keyInputs.length).toBe(2);
-    // Anthropic inputs remain unchanged at default values
-    expect(screen.getByDisplayValue('https://api.anthropic.com')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('claude-3-opus')).toBeInTheDocument();
-    const anthropicKey = screen.getByDisplayValue('****83ab');
-    expect(anthropicKey).toBeInTheDocument();
+    expect(keyInputs.length).toBe(3); // read-only result + OpenAI input + Anthropic input
   });
 
   it('shows loading state during dispatcher fetch', async () => {
-    let resolve: (value: { apiKey: string; baseUri: string; model: string; expiresIn: number }) => void;
-    const fetchDispatcherCredentials = vi.fn(() => new Promise<{ apiKey: string; baseUri: string; model: string; expiresIn: number }>((r) => { resolve = r; }));
+    let resolve: (value: { apiKey: string; baseUri: string; model: string; openaiModel: string; anthropicModel: string; expiresIn: number }) => void;
+    const fetchDispatcherCredentials = vi.fn(() => new Promise<{ apiKey: string; baseUri: string; model: string; openaiModel: string; anthropicModel: string; expiresIn: number }>((r) => { resolve = r; }));
     renderAt('/settings', settingsClient({ getSettings: async () => realSettings, fetchDispatcherCredentials }));
     await waitFor(() => expect(screen.getByText('运行模式')).toBeInTheDocument());
 
@@ -632,7 +631,7 @@ describe('Settings page', () => {
     const button = screen.getByText('获取中...') as HTMLButtonElement;
     expect(button.disabled).toBe(true);
 
-    resolve!({ apiKey: 'k', baseUri: 'u', model: 'm', expiresIn: 60 });
+    resolve!({ apiKey: 'k', baseUri: 'u', model: 'm', openaiModel: 'gpt', anthropicModel: 'claude', expiresIn: 60 });
     await waitFor(() => expect(screen.getByText('获取凭证')).toBeInTheDocument());
   });
 
