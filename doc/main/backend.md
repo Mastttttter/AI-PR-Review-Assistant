@@ -384,3 +384,20 @@ Delivered scope:
 Verification:
 
 - 317/317 tests pass (5 new: 2 PR fetch extended fields, 2 review task lifecycle pr_url, 1 report pr_url).
+
+## Go API Dispatcher Server
+
+Status: completed by backend-engineer on 2026-05-31.
+
+Delivered scope:
+
+- Go HTTP server in `dispatcher/` using gin-gonic/gin with two endpoints.
+- `POST /api/issue-key`: generates cryptographically random temporary API keys (32 hex chars with `tmp-` prefix), stored in memory with 10-minute TTL. Key rotation on subsequent calls — existing valid key is destroyed and replaced. Thread-safe via sync.Mutex.
+- `GET /health`: returns `{"status": "ok"}` with HTTP 200.
+- Environment variable configuration: `DISPATCHER_LLM_API_KEY` (required, fatal startup error if missing), `DISPATCHER_LLM_BASE_URL` (default: `https://api.openai.com/v1`), `DISPATCHER_LLM_MODEL` (default: `gpt-4o-mini`), `DISPATCHER_PORT` (default: `8318`).
+- Module path: `github.com/apr-review/dispatcher`.
+
+Verification:
+
+- `go build ./...` passes cleanly.
+- `go test ./... -v` passes with 5/5 tests: health endpoint (200 + correct JSON), issue-key response structure (api_key prefix + length, base_uri, model, expires_in), key rotation (sequential calls return different keys), concurrent access safety (50 goroutines, no panics), missing API key detection.
