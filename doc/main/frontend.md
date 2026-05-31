@@ -456,3 +456,8 @@ Verification:
 
 - **Scope:** Changed handleDispatcherFetch to always auto-fill the OpenAI provider regardless of which provider tab is active, since the dispatcher issues OpenAI-compatible credentials. Updated test to verify OpenAI is populated when Anthropic tab is active and Anthropic inputs remain at defaults.
 - **Verification:** pnpm verify clean (79/79 tests, typecheck, build 269.94 kB).
+
+### Auto-fill both providers on dispatcher credential fetch (2026-05-31)
+
+- **Scope:** Changed handleDispatcherFetch to fill both OpenAI and Anthropic providers with shared baseUri/apiKey and per-provider models from the dispatcher response (openaiModel, anthropicModel). Result display now shows separate "OpenAI Model" and "Anthropic Model" read-only fields. Updated DispatcherFetchResponse type with openaiModel and anthropicModel fields.
+- **Verification:** pnpm verify clean (79/79 tests, typecheck, build 270.23 kB).
