@@ -45,8 +45,8 @@ class LLMProvider(ABC):
 
 
 def _extract_rule_ids_from_prompt(prompt: str) -> list[str]:
-    """Extract rule_id values from the Pre-matched Rule Results section of the prompt."""
-    match = re.search(r"## Pre-matched Rule Results.*?\n(\[.*?\])\s*\n", prompt, re.DOTALL)
+    """Extract rule_id values from the Pre-matched Rule Hints or Team Rules section of the prompt."""
+    match = re.search(r"## Pre-matched Rule (?:Results|Hints).*?\n(\[.*?\])\s*\n", prompt, re.DOTALL)
     if not match:
         return []
     try:
