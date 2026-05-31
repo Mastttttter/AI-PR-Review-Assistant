@@ -7,6 +7,10 @@
 #   DISPATCHER_ANTHROPIC_MODEL  - Override Anthropic model name
 #   DISPATCHER_KEY_TTL          - Temp key TTL in seconds (default: 600)
 
+# Public base URI reported in API responses (e.g., /api/issue-key).
+# When empty, defaults to "http://127.0.0.1:{port}".
+# base-uri: "http://www.ycit.xyz:8318"
+
 # Server port
 port: 8318
 

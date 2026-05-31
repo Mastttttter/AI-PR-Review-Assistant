@@ -230,11 +230,27 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
 
 ## Dispatcher: dual-provider config + both models in response
 
-- [ ] Update Python backend DispatcherFetchResponse to pass both models
+- [x] Update Python backend DispatcherFetchResponse to pass both models
   - Branch: `feat/dispatcher-dual-model-response`
   - Scope:
     - `backend/apr_backend/api/settings.py`: Add `openai_model: str` and `anthropic_model: str = ""` to `DispatcherFetchResponse`. Update `dispatcher_fetch()` return statement to pass both fields from dispatcher JSON response.
     - Update backend settings tests to assert both model fields in success response.
   - Acceptance: `POST /api/settings/dispatcher-fetch` response includes `openai_model` and `anthropic_model`; existing tests pass.
-  - Tests: 323/323 passing, all 29 settings tests pass, updated dispatcher-fetch tests verify both model fields.
+  - Tests: 29/29 settings tests pass. 8 pre-existing llm_adapter failures (URL doubling bug, fails same on main).
   - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-31 (already implemented on main via acfc549; verified code + tests match)
+
+## Configurable dispatcher base_uri
+
+- [x] Make dispatcher base_uri configurable via config.yaml
+  - Branch: `feat/dispatcher-base-uri-config`
+  - Scope:
+    - `/tmp/CLIProxyAPI/internal/config/config.go`: Add `BaseURI string \`yaml:"base-uri" json:"base-uri"\`` field to the `Config` struct.
+    - `dispatcher/main.go`: Replace hardcoded `"base_uri": fmt.Sprintf("http://127.0.0.1:%d", cfg.Port)` with `cfg.BaseURI`, falling back to `http://127.0.0.1:{port}` when empty.
+    - `dispatcher/config.example.yaml`: Add documented `base-uri` field in comments.
+    - `dispatcher/config.yaml`: Set `base-uri: "http://www.ycit.xyz:8318"`.
+    - `dispatcher/main_test.go`: Set `BaseURI: "http://127.0.0.1:18318"` in test config; add a test for fallback behavior when `BaseURI` is empty.
+  - Acceptance: `/api/issue-key` response uses `base_uri` from config.yaml when set; falls back to `http://127.0.0.1:{port}` when empty; remote deployments work with custom URI.
+  - Tests: 24/26 pass (2 pre-existing rotation test failures on main). 2 new BaseURI tests pass.
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-31

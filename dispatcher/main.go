@@ -58,7 +58,7 @@ func main() {
 					prov.IssueKey(key)
 					c.JSON(http.StatusOK, gin.H{
 						"api_key":         key,
-						"base_uri":        fmt.Sprintf("http://127.0.0.1:%d", cfg.Port),
+						"base_uri":        resolveBaseURI(cfg),
 						"model":           model,
 						"openai_model":    model,
 						"anthropic_model": anthropicModel,
@@ -99,6 +99,13 @@ func envAnthropicModel(cfg *config.Config) string {
 		return cfg.ClaudeKey[0].Models[0].Name
 	}
 	return ""
+}
+
+func resolveBaseURI(cfg *config.Config) string {
+	if cfg.BaseURI != "" {
+		return cfg.BaseURI
+	}
+	return fmt.Sprintf("http://127.0.0.1:%d", cfg.Port)
 }
 
 func envInt(key string, defaultVal int) time.Duration {
