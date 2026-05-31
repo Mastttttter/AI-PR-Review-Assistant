@@ -198,3 +198,10 @@ Chief engineer writes tasks. Backend engineer updates completed items after impl
   - Tests: 5/5 passing (health endpoint, issue-key response structure, key rotation, concurrent access safety, missing API key detection).
   - Owner: backend-engineer
   - Signed-off: backend-engineer, 2026-05-31
+
+- [x] Add dispatcher-fetch endpoint to settings API
+  - Scope: Add POST /api/settings/dispatcher-fetch that accepts a dispatcher URL, calls POST {url}/api/issue-key via httpx, overrides base_uri with user-provided URL, and returns credentials. Handle connection errors and timeouts as 502.
+  - Acceptance: Frontend can fetch credentials from dispatcher; unreachable returns 502; timeout handled; base_uri overridden.
+  - Tests: 6/6 passing (success, base_uri override, connection error 502, timeout 502, non-200 502, owner header required).
+  - Owner: backend-engineer
+  - Signed-off: backend-engineer, 2026-05-31
