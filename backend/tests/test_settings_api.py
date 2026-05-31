@@ -408,3 +408,87 @@ class TestPostUsesStoredKey:
         assert response.status_code == 200
         assert response.json()["success"] is False
         assert "No API key" in response.json()["message"]
+
+
+class TestDispatcherFetch:
+    DISPATCHER_RESPONSE = {
+        "api_key": "tmp-a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+        "base_uri": "http://dispatcher:8318",
+        "model": "gpt-4o-mini",
+        "expires_in": 600,
+    }
+
+    def test_success_returns_credentials(self, client, clean_config) -> None:
+        with patch("apr_backend.api.settings.httpx.post") as mock_post:
+            mock_post.return_value.status_code = 200
+            mock_post.return_value.is_success = True
+            mock_post.return_value.json.return_value = self.DISPATCHER_RESPONSE
+
+            response = client.post(
+                "/api/settings/dispatcher-fetch",
+                json={"url": "http://localhost:8318"},
+                headers=OWNER,
+            )
+            assert response.status_code == 200
+            body = response.json()
+            assert body["api_key"] == self.DISPATCHER_RESPONSE["api_key"]
+            assert body["model"] == self.DISPATCHER_RESPONSE["model"]
+            assert body["expires_in"] == self.DISPATCHER_RESPONSE["expires_in"]
+            assert body["base_uri"] == "http://localhost:8318"
+
+    def test_base_uri_overrides_dispatcher_response(self, client, clean_config) -> None:
+        with patch("apr_backend.api.settings.httpx.post") as mock_post:
+            mock_post.return_value.status_code = 200
+            mock_post.return_value.is_success = True
+            mock_post.return_value.json.return_value = self.DISPATCHER_RESPONSE
+
+            response = client.post(
+                "/api/settings/dispatcher-fetch",
+                json={"url": "http://10.0.0.5:9999"},
+                headers=OWNER,
+            )
+            assert response.status_code == 200
+            body = response.json()
+            assert body["base_uri"] == "http://10.0.0.5:9999"
+
+    def test_connection_error_returns_502(self, client, clean_config) -> None:
+        import httpx as httpx_mod
+        with patch("apr_backend.api.settings.httpx.post", side_effect=httpx_mod.ConnectError("connection refused")):
+            response = client.post(
+                "/api/settings/dispatcher-fetch",
+                json={"url": "http://localhost:8318"},
+                headers=OWNER,
+            )
+            assert response.status_code == 502
+            assert "connection refused" in response.json()["detail"].lower()
+
+    def test_timeout_returns_502(self, client, clean_config) -> None:
+        with patch("apr_backend.api.settings.httpx.post", side_effect=__import__("httpx").TimeoutException("timeout")):
+            response = client.post(
+                "/api/settings/dispatcher-fetch",
+                json={"url": "http://localhost:8318"},
+                headers=OWNER,
+            )
+            assert response.status_code == 502
+            assert "timed out" in response.json()["detail"].lower()
+
+    def test_dispatcher_non_200_returns_502(self, client, clean_config) -> None:
+        with patch("apr_backend.api.settings.httpx.post") as mock_post:
+            mock_post.return_value.status_code = 500
+            mock_post.return_value.is_success = False
+            mock_post.return_value.text = "Internal Server Error"
+
+            response = client.post(
+                "/api/settings/dispatcher-fetch",
+                json={"url": "http://localhost:8318"},
+                headers=OWNER,
+            )
+            assert response.status_code == 502
+            assert "Internal Server Error" in response.json()["detail"]
+
+    def test_requires_demo_owner_header(self, client, clean_config) -> None:
+        response = client.post(
+            "/api/settings/dispatcher-fetch",
+            json={"url": "http://localhost:8318"},
+        )
+        assert response.status_code == 422

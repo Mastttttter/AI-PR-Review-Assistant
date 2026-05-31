@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import httpx
-from fastapi import APIRouter, Header, status
+from fastapi import APIRouter, Header, HTTPException, status
 from pydantic import BaseModel, Field
 
 from apr_backend.core.config_loader import _CONFIG_PATH as CONFIG_PATH
@@ -46,6 +46,17 @@ def _resolve_api_key(incoming_key: str | None, provider: str) -> str | None:
         provider_cfg = config.get(provider, {})
         return provider_cfg.get("api_key") if isinstance(provider_cfg, dict) else None
     return incoming_key
+
+
+class DispatcherFetchRequest(BaseModel):
+    url: str = Field(min_length=1)
+
+
+class DispatcherFetchResponse(BaseModel):
+    api_key: str
+    base_uri: str
+    model: str
+    expires_in: int
 
 
 class TestRequest(BaseModel):
@@ -119,3 +130,28 @@ def test_settings_connection(payload: TestRequest, demo_owner: DemoOwnerHeader) 
         return {"success": False, "message": "Connection timed out"}
     except httpx.RequestError as exc:
         return {"success": False, "message": f"Connection failed: {exc}"}
+
+
+@router.post("/dispatcher-fetch", status_code=status.HTTP_200_OK)
+def dispatcher_fetch(payload: DispatcherFetchRequest, demo_owner: DemoOwnerHeader) -> DispatcherFetchResponse:
+    dispatcher_url = payload.url.rstrip("/")
+    try:
+        response = httpx.post(f"{dispatcher_url}/api/issue-key", timeout=httpx.Timeout(10))
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Connection to dispatcher timed out")
+    except httpx.ConnectError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Failed to connect to dispatcher: {exc}") from exc
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Dispatcher request failed: {exc}") from exc
+
+    if not response.is_success:
+        detail = response.text[:500] if response.text else f"Dispatcher returned status {response.status_code}"
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=detail)
+
+    data = response.json()
+    return DispatcherFetchResponse(
+        api_key=data["api_key"],
+        base_uri=payload.url.rstrip("/"),
+        model=data["model"],
+        expires_in=data["expires_in"],
+    )
