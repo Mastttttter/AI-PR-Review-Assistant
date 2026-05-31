@@ -446,3 +446,8 @@ Delivered scope:
 Verification:
 
 - 72/72 tests pass (3 updated tests, 1 new report detail test); typecheck clean; build succeeds.
+
+### Dispatcher credential fetch section on SettingsPage (2026-05-31)
+
+- **Scope:** Added collapsible "从 API 分发器获取凭证" section to SettingsPage. Visible only in real API mode. Includes URL input, fetch button, 3 read-only result fields (masked API key, base URI, model), and expiry badge in minutes. On success, auto-fills the active provider's configuration fields.
+- **Verification:** pnpm verify clean (79/79 tests, 7 new). Browser validation: all 6 scenarios pass including error handling, loading state, and end-to-end fetch with Go dispatcher server.
