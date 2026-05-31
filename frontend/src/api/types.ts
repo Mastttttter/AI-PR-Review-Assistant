@@ -20,6 +20,7 @@ export interface ReviewTask {
   createdBy?: string | null;
   createdAt: string;
   updatedAt: string;
+  errorMessage?: string | null;
 }
 
 export interface CreateReviewTaskRequest {
