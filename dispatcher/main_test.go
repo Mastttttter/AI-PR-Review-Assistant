@@ -267,3 +267,19 @@ func TestEnvAnthropicModelReturnsEmptyWhenNoConfig(t *testing.T) {
 		t.Fatalf("expected empty string for no config, got '%s'", result)
 	}
 }
+
+func TestResolveBaseURIUsesConfiguredValue(t *testing.T) {
+	cfg := &config.Config{BaseURI: "http://www.ycit.xyz:8318", Port: 18318}
+	result := resolveBaseURI(cfg)
+	if result != "http://www.ycit.xyz:8318" {
+		t.Fatalf("expected base_uri from config, got '%s'", result)
+	}
+}
+
+func TestResolveBaseURIFallbackWhenEmpty(t *testing.T) {
+	cfg := &config.Config{BaseURI: "", Port: 8318}
+	result := resolveBaseURI(cfg)
+	if result != "http://127.0.0.1:8318" {
+		t.Fatalf("expected fallback base_uri 'http://127.0.0.1:8318', got '%s'", result)
+	}
+}

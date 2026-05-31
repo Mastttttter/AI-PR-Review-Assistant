@@ -448,3 +448,33 @@ Delivered scope:
 Verification:
 
 - 323/323 tests pass (6 dispatcher-fetch tests updated for new behavior).
+
+## Dispatcher-Fetch Dual-Model Response
+
+Status: completed by backend-engineer on 2026-05-31.
+
+Delivered scope:
+
+- `DispatcherFetchResponse` model already includes `openai_model: str` and `anthropic_model: str = ""` fields (merged in `acfc549`).
+- `dispatcher_fetch()` passes both `openai_model` and `anthropic_model` from the dispatcher JSON response, with fallback to the `model` field for backward compatibility.
+- Settings tests verify both model fields are present in the success response alongside `api_key`, `base_uri`, `model`, and `expires_in`.
+
+Verification:
+
+- 29/29 settings tests pass (6 dispatcher-fetch tests assert both model fields).
+
+## Configurable Dispatcher base_uri
+
+Status: completed by backend-engineer on 2026-05-31.
+
+Delivered scope:
+
+- Added `BaseURI string` field to the CLIProxyAPI SDK `Config` struct (`yaml:"base-uri" json:"base-uri"`) in `/tmp/CLIProxyAPI/internal/config/config.go`.
+- Extracted `resolveBaseURI(cfg)` helper in `dispatcher/main.go` — returns `cfg.BaseURI` when set, falls back to `http://127.0.0.1:{port}` when empty. Used in `/api/issue-key` handler response.
+- `dispatcher/config.example.yaml`: documented `base-uri` field with example.
+- `dispatcher/config.yaml`: created with `base-uri: "http://www.ycit.xyz:8318"`.
+- Two new unit tests: `TestResolveBaseURIUsesConfiguredValue` and `TestResolveBaseURIFallbackWhenEmpty`.
+
+Verification:
+
+- `go test ./...` passes 24/26 (2 pre-existing rotation timing failures on main). Both new BaseURI tests pass.
