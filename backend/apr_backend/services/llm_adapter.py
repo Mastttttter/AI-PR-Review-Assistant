@@ -97,7 +97,7 @@ class OpenAICompatibleProvider(LLMProvider):
     def __init__(
         self,
         api_key: str,
-        base_url: str = "https://api.openai.com/v1",
+        base_url: str = "https://api.openai.com",
         model: str = "gpt-4o-mini",
         timeout: int = 60,
     ) -> None:
@@ -108,7 +108,7 @@ class OpenAICompatibleProvider(LLMProvider):
 
     def generate_review(self, prompt: str) -> dict[str, Any]:
         logger.info("LLM call: model=%s prompt_length=%d preview=%s", self._model, len(prompt), _redact_for_log(prompt))
-        url = f"{self._base_url}/chat/completions"
+        url = f"{self._base_url}/v1/chat/completions"
 
         try:
             response = httpx.post(
