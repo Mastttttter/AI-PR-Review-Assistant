@@ -12,7 +12,7 @@ from apr_backend.core.settings import get_settings
 from apr_backend.db.enums import RiskLevel, RuleType, Severity, TaskStatus
 from apr_backend.db.models import ReviewIssue, ReviewRule, ReviewReport, ReviewTask
 from apr_backend.services.diff_parser import parse_diff
-from apr_backend.services.llm_adapter import LLMError, MockLLMProvider
+from apr_backend.services.llm_adapter import LLMAuthError, LLMError, MockLLMProvider
 from apr_backend.services.orchestrator import _build_prompt, run_review_orchestrator
 
 MULTI_FILE_DIFF = """\
@@ -159,6 +159,24 @@ class TestLLMFailure:
         with db_session_factory() as session:
             reloaded = session.get(ReviewTask, task.id)
             assert "LLM" in reloaded.error_message
+
+    def test_auth_failure_sets_key_expired_message(self, db_session_factory, monkeypatch) -> None:
+        class AuthFailingProvider:
+            def generate_review(self, _prompt):
+                raise LLMAuthError("auth failed")
+
+        monkeypatch.setattr(
+            "apr_backend.services.orchestrator.create_llm_provider",
+            lambda: AuthFailingProvider(),
+        )
+        task = _create_task(db_session_factory)
+
+        run_review_orchestrator(task.id, db_factory=db_session_factory)
+
+        with db_session_factory() as session:
+            reloaded = session.get(ReviewTask, task.id)
+            assert reloaded.status == TaskStatus.failed
+            assert reloaded.error_message == "key_expired"
 
 
 class TestRerun:
