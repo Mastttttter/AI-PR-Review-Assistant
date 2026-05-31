@@ -401,3 +401,19 @@ Verification:
 
 - `go build ./...` passes cleanly.
 - `go test ./... -v` passes with 5/5 tests: health endpoint (200 + correct JSON), issue-key response structure (api_key prefix + length, base_uri, model, expires_in), key rotation (sequential calls return different keys), concurrent access safety (50 goroutines, no panics), missing API key detection.
+
+## Dispatcher-Fetch Endpoint
+
+Status: completed by backend-engineer on 2026-05-31.
+
+Delivered scope:
+
+- `POST /api/settings/dispatcher-fetch` endpoint in the settings API that proxies credential issuance from the Go dispatcher server.
+- Accepts a dispatcher URL, calls `POST {url}/api/issue-key` via httpx with a 10-second timeout, overrides the `base_uri` in the response with the user-provided URL (since the dispatcher may report an internal Docker hostname that is unreachable from the browser).
+- Pydantic request/response models: `DispatcherFetchRequest` (url field) and `DispatcherFetchResponse` (api_key, base_uri, model, expires_in).
+- Error handling: connection refused/timeout returns HTTP 502 with descriptive message; dispatcher non-200 responses forwarded as 502.
+- Requires `X-Demo-Owner` header (reuses existing `DemoOwnerHeader`).
+
+Verification:
+
+- 323/323 tests pass (6 new: success credentials, base_uri override, connection error 502, timeout 502, non-200 forwarding, owner header required).
