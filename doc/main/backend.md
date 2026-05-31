@@ -409,11 +409,42 @@ Status: completed by backend-engineer on 2026-05-31.
 Delivered scope:
 
 - `POST /api/settings/dispatcher-fetch` endpoint in the settings API that proxies credential issuance from the Go dispatcher server.
-- Accepts a dispatcher URL, calls `POST {url}/api/issue-key` via httpx with a 10-second timeout, overrides the `base_uri` in the response with the user-provided URL (since the dispatcher may report an internal Docker hostname that is unreachable from the browser).
+- Accepts a dispatcher URL, calls `POST {url}/api/issue-key` via httpx with a 10-second timeout, returns credentials using the dispatcher's own `base_uri` from the response.
 - Pydantic request/response models: `DispatcherFetchRequest` (url field) and `DispatcherFetchResponse` (api_key, base_uri, model, expires_in).
 - Error handling: connection refused/timeout returns HTTP 502 with descriptive message; dispatcher non-200 responses forwarded as 502.
 - Requires `X-Demo-Owner` header (reuses existing `DemoOwnerHeader`).
 
 Verification:
 
-- 323/323 tests pass (6 new: success credentials, base_uri override, connection error 502, timeout 502, non-200 forwarding, owner header required).
+- 323/323 tests pass (6 new: success credentials, dispatcher base_uri used, connection error 502, timeout 502, non-200 forwarding, owner header required).
+
+## Go Dispatcher CLIProxyAPI SDK Rebuild
+
+Status: completed by backend-engineer on 2026-05-31.
+
+Delivered scope:
+
+- Replaced standalone gin server with CLIProxyAPI SDK-based service using `cliproxy.NewBuilder()`.
+- `dispatcher/config.yaml` with `api-keys`, `openai-compatibility` provider entries (name, base-url, api-key-entries, models), and `config.example.yaml` template.
+- Custom `sdk/access` Provider in `dispatcher/tempkey/provider.go`: in-memory temp key storage with TTL-based expiry, authenticates via Bearer token / X-Api-Key / ?key= query parameter, key rotation destroys existing valid key before issuing new one.
+- Custom `/api/issue-key` and `/health` routes registered via `sdk/api.WithRouterConfigurator`.
+- Configuration: `DISPATCHER_KEY_TTL` env var (default 600s) for temp key expiry, `DISPATCHER_LLM_MODEL` env var with fallback to config's first model, `DISPATCHER_PORT` env var overrides config port.
+- Module path `github.com/apr-review/dispatcher` with local replace directive to `/tmp/CLIProxyAPI`.
+
+Verification:
+
+- `go build ./...` passes cleanly.
+- 21/21 Go tests pass (9 main: health, issue-key response, key rotation, concurrent access, expired key rejection, missing config error, key uniqueness, env model with/without config; 12 tempkey: Bearer/X-Api-Key/?key= auth, invalid key, expired key, no credentials, rotation, expiry, concurrent safety, identifier, non-temp key, default TTL).
+
+## Dispatcher-Fetch base_uri Fix
+
+Status: completed by backend-engineer on 2026-05-31.
+
+Delivered scope:
+
+- Removed `base_uri = payload.url.rstrip("/")` override in `POST /api/settings/dispatcher-fetch` — now uses `data["base_uri"]` directly from the dispatcher response.
+- Updated test assertions: `test_base_uri_uses_dispatcher_response` verifies the dispatcher's `base_uri` field is returned as-is.
+
+Verification:
+
+- 323/323 tests pass (6 dispatcher-fetch tests updated for new behavior).

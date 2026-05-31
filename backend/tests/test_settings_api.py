@@ -434,9 +434,9 @@ class TestDispatcherFetch:
             assert body["api_key"] == self.DISPATCHER_RESPONSE["api_key"]
             assert body["model"] == self.DISPATCHER_RESPONSE["model"]
             assert body["expires_in"] == self.DISPATCHER_RESPONSE["expires_in"]
-            assert body["base_uri"] == "http://localhost:8318"
+            assert body["base_uri"] == self.DISPATCHER_RESPONSE["base_uri"]
 
-    def test_base_uri_overrides_dispatcher_response(self, client, clean_config) -> None:
+    def test_base_uri_uses_dispatcher_response(self, client, clean_config) -> None:
         with patch("apr_backend.api.settings.httpx.post") as mock_post:
             mock_post.return_value.status_code = 200
             mock_post.return_value.is_success = True
@@ -449,7 +449,7 @@ class TestDispatcherFetch:
             )
             assert response.status_code == 200
             body = response.json()
-            assert body["base_uri"] == "http://10.0.0.5:9999"
+            assert body["base_uri"] == self.DISPATCHER_RESPONSE["base_uri"]
 
     def test_connection_error_returns_502(self, client, clean_config) -> None:
         import httpx as httpx_mod
