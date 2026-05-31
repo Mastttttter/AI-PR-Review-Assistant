@@ -102,7 +102,7 @@ export interface ReviewRule {
   id: string;
   name: string;
   description: string;
-  type: RuleType;
+  ruleType: RuleType;
   severity: IssueSeverity;
   enabled: boolean;
   createdAt: string;
@@ -112,7 +112,7 @@ export interface ReviewRule {
 export interface UpsertReviewRuleRequest {
   name: string;
   description: string;
-  type: RuleType;
+  ruleType: RuleType;
   severity: IssueSeverity;
   enabled: boolean;
 }
