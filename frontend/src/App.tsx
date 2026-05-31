@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { ApiRequestError, apiClient } from './api';
-import type { ApiClient, CreateReviewTaskRequest, DashboardResponse, FeedbackStatus, FetchPrResponse, IssueSeverity, ProviderConfig, ReviewIssue, ReviewReport, ReviewRule, ReviewTask, ReviewTaskListQuery, ReviewTaskStatus, RiskLevel, RuleType, SettingsResponse, TestConnectionRequest, TestConnectionResponse, UpsertReviewRuleRequest } from './api';
+import type { ApiClient, CreateReviewTaskRequest, DashboardResponse, DispatcherFetchResponse, FeedbackStatus, FetchPrResponse, IssueSeverity, ProviderConfig, ReviewIssue, ReviewReport, ReviewRule, ReviewTask, ReviewTaskListQuery, ReviewTaskStatus, RiskLevel, RuleType, SettingsResponse, TestConnectionRequest, TestConnectionResponse, UpsertReviewRuleRequest } from './api';
 import { confidenceLevelLabels, feedbackStatusLabels, issueSeverityLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels, ruleTypeLabels } from './api';
 
 const MAX_DIFF_LENGTH = 50_000;
@@ -20,7 +20,7 @@ type HistoryClientApi = Pick<ApiClient, 'listReviewTasks'>;
 type RulesClientApi = Pick<ApiClient, 'listReviewRules' | 'createReviewRule' | 'updateReviewRule' | 'enableReviewRule' | 'disableReviewRule' | 'deleteReviewRule'>;
 type FeedbackClientApi = Pick<ApiClient, 'updateIssueFeedback'>;
 type DashboardClientApi = Pick<ApiClient, 'getDashboardMetrics'>;
-type SettingsClientApi = Pick<ApiClient, 'getSettings' | 'updateSettings' | 'testSettingsConnection'>;
+type SettingsClientApi = Pick<ApiClient, 'getSettings' | 'updateSettings' | 'testSettingsConnection' | 'fetchDispatcherCredentials'>;
 
 type FormErrors = Partial<Record<keyof CreateReviewTaskRequest | 'submit', string>>;
 
@@ -927,6 +927,12 @@ function SettingsPage({ client }: { client: SettingsClientApi }) {
   const [activeProvider, setActiveProvider] = useState('openai');
   const [systemPrompt, setSystemPrompt] = useState('');
 
+  const [dispatcherOpen, setDispatcherOpen] = useState(false);
+  const [dispatcherUrl, setDispatcherUrl] = useState('');
+  const [dispatcherFetching, setDispatcherFetching] = useState(false);
+  const [dispatcherError, setDispatcherError] = useState<string | null>(null);
+  const [dispatcherResult, setDispatcherResult] = useState<DispatcherFetchResponse | null>(null);
+
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -1000,6 +1006,27 @@ function SettingsPage({ client }: { client: SettingsClientApi }) {
     } finally {
       if (provider === 'openai') setTestingOpenai(false);
       else setTestingAnthropic(false);
+    }
+  }
+
+  async function handleDispatcherFetch() {
+    setDispatcherFetching(true);
+    setDispatcherError(null);
+    setDispatcherResult(null);
+    try {
+      const result: DispatcherFetchResponse = await client.fetchDispatcherCredentials(dispatcherUrl.trim());
+      setDispatcherResult(result);
+      const providerKey = activeProvider;
+      if (providerKey === 'openai') {
+        setOpenai((prev) => ({ ...prev, baseUri: result.baseUri, apiKey: result.apiKey, model: result.model }));
+      } else {
+        setAnthropic((prev) => ({ ...prev, baseUri: result.baseUri, apiKey: result.apiKey, model: result.model }));
+      }
+      setSaved(false);
+    } catch (e) {
+      setDispatcherError(e instanceof ApiRequestError ? e.message : '获取凭证失败，请稍后重试。');
+    } finally {
+      setDispatcherFetching(false);
     }
   }
 
@@ -1133,6 +1160,67 @@ function SettingsPage({ client }: { client: SettingsClientApi }) {
                 </div>
               ) : null}
             </section>
+
+            {!mockEnabled ? (
+              <section className="settings-provider">
+                <h4 className="settings-provider-title">
+                  <button
+                    type="button"
+                    className="dispatcher-toggle"
+                    onClick={() => setDispatcherOpen(!dispatcherOpen)}
+                  >
+                    <span className={`toggle-arrow ${dispatcherOpen ? 'arrow-open' : ''}`}>{dispatcherOpen ? '▼' : '▶'}</span>
+                    从 API 分发器获取凭证
+                  </button>
+                </h4>
+                {dispatcherOpen ? (
+                  <div className="dispatcher-section">
+                    <div className="form-grid">
+                      <label className="form-field dispatcher-url-field">
+                        <span>分发器服务器地址</span>
+                        <input
+                          value={dispatcherUrl}
+                          onChange={(e) => { setDispatcherUrl(e.target.value); setDispatcherError(null); setDispatcherResult(null); }}
+                          placeholder="http://localhost:8318"
+                        />
+                      </label>
+                    </div>
+                    <div className="settings-provider-actions">
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        disabled={dispatcherFetching || !dispatcherUrl.trim()}
+                        onClick={handleDispatcherFetch}
+                      >
+                        {dispatcherFetching ? '获取中...' : '获取凭证'}
+                      </button>
+                      {dispatcherError ? (
+                        <span className="test-result-badge test-failure">{dispatcherError}</span>
+                      ) : null}
+                    </div>
+                    {dispatcherResult ? (
+                      <div className="dispatcher-result">
+                        <label className="form-field">
+                          <span>临时 API Key</span>
+                          <input readOnly value={'****' + dispatcherResult.apiKey.slice(-4)} />
+                        </label>
+                        <label className="form-field">
+                          <span>Base URI</span>
+                          <input readOnly value={dispatcherResult.baseUri} />
+                        </label>
+                        <label className="form-field">
+                          <span>Model</span>
+                          <input readOnly value={dispatcherResult.model} />
+                        </label>
+                        <span className="test-result-badge test-success">
+                          凭证有效，剩余 {Math.round(dispatcherResult.expiresIn / 60)} 分钟
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
 
             <section className="settings-prompt-section">
               <label className="form-field">

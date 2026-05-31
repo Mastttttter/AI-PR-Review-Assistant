@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiClient, ApiRequestError, feedbackStatusLabels, issueTypeLabels, reviewTaskStatusLabels, riskLevelLabels } from '../api';
-import type { FetchPrResponse, SettingsResponse } from '../api';
+import type { DispatcherFetchResponse, FetchPrResponse, SettingsResponse } from '../api';
 import { mockReviewReport, mockReviewRule } from '../test-fixtures/mockReview';
 
 function jsonResponse(payload: unknown, init: ResponseInit = {}) {
@@ -248,6 +248,40 @@ describe('ApiClient', () => {
       name: 'ApiRequestError',
       status: 404,
       message: 'PR 不存在',
+    } satisfies Partial<ApiRequestError>);
+  });
+
+  it('calls dispatcher fetch endpoint and returns deserialized response', async () => {
+    const fetcher = vi.fn(async () => jsonResponse({
+      api_key: 'sk-dispatcher-key-001',
+      base_uri: 'https://api.openai.com/v1',
+      model: 'gpt-4o',
+      expires_in: 3600,
+    }));
+    const client = new ApiClient({ baseUrl: '/api', fetcher });
+
+    const result = await client.fetchDispatcherCredentials('https://dispatcher.example.com/keys');
+
+    expect(result).toEqual({
+      apiKey: 'sk-dispatcher-key-001',
+      baseUri: 'https://api.openai.com/v1',
+      model: 'gpt-4o',
+      expiresIn: 3600,
+    } satisfies DispatcherFetchResponse);
+    expect(fetcher).toHaveBeenCalledWith('/api/settings/dispatcher-fetch', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ url: 'https://dispatcher.example.com/keys' }),
+    }));
+  });
+
+  it('handles dispatcher fetch error', async () => {
+    const fetcher = vi.fn(async () => jsonResponse({ detail: '分发器不可达' }, { status: 502 }));
+    const client = new ApiClient({ fetcher });
+
+    await expect(client.fetchDispatcherCredentials('https://bad.example.com')).rejects.toMatchObject({
+      name: 'ApiRequestError',
+      status: 502,
+      message: '分发器不可达',
     } satisfies Partial<ApiRequestError>);
   });
 });

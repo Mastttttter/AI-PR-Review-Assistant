@@ -2,6 +2,7 @@ import type {
   CreateReviewTaskRequest,
   CreateReviewTaskResponse,
   DashboardResponse,
+  DispatcherFetchResponse,
   FeedbackRequest,
   FeedbackResponse,
   FetchPrRequest,
@@ -186,6 +187,10 @@ export class ApiClient {
 
   async fetchPrInfo(url: string): Promise<FetchPrResponse> {
     return this.request<FetchPrResponse>('/pr-fetch', { method: 'POST', body: { url } satisfies FetchPrRequest });
+  }
+
+  async fetchDispatcherCredentials(url: string): Promise<DispatcherFetchResponse> {
+    return this.request<DispatcherFetchResponse>('/settings/dispatcher-fetch', { method: 'POST', body: { url } });
   }
 
   private async request<T>(path: string, init: { method?: string; body?: RequestBody } = {}): Promise<T> {

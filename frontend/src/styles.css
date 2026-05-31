@@ -1015,6 +1015,59 @@ h3 { font-size: clamp(2.2rem, 5vw, 5.2rem); }
   line-height: 1.6;
 }
 
+.dispatcher-toggle {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dispatcher-toggle:hover {
+  opacity: 0.85;
+}
+
+.toggle-arrow {
+  display: inline-block;
+  font-size: 0.8rem;
+  transition: transform 0.15s ease;
+}
+
+.toggle-arrow.arrow-open {
+  transform: rotate(0deg);
+}
+
+.dispatcher-section {
+  margin-top: 1rem;
+}
+
+.dispatcher-url-field {
+  grid-column: 1 / -1;
+}
+
+.dispatcher-result {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.dispatcher-result .form-field {
+  margin-bottom: 0;
+}
+
+.dispatcher-result input[readonly] {
+  opacity: 0.75;
+  cursor: default;
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .pr-fetch-row {
   display: flex;
   gap: 0.75rem;

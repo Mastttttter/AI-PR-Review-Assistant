@@ -178,3 +178,14 @@ export interface FetchPrResponse {
   targetBranch: string;
   developerName: string;
 }
+
+export interface DispatcherFetchRequest {
+  url: string;
+}
+
+export interface DispatcherFetchResponse {
+  apiKey: string;
+  baseUri: string;
+  model: string;
+  expiresIn: number;
+}
